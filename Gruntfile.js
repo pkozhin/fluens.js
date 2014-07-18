@@ -1,17 +1,9 @@
 module.exports = function (grunt) {
 
-    require('time-grunt')(grunt);
-
-    grunt.loadNpmTasks("grunt-contrib-concat");
-    grunt.loadNpmTasks("grunt-contrib-jshint");
-    grunt.loadNpmTasks("grunt-contrib-clean");
-    grunt.loadNpmTasks('grunt-bumpup');
-    grunt.loadNpmTasks("grunt-karma");
-
     var config;
 
     grunt.initConfig(config = {
-        releaseDir: "dist",
+        releaseDir: "tasks",
         pkg: grunt.file.readJSON("package.json"),
         license: "License: <%= grunt.config.get('pkg.license.type') %>, <%= grunt.config.get('pkg.license.url') %>",
         copyright: "<%= grunt.config.get('pkg.copyright') %>",
@@ -57,9 +49,34 @@ module.exports = function (grunt) {
             }
         },
         jshint: {
-            fluent: ["<%= fluent.file %>"]
+            fluent: ["<%= fluent.file %>"],
+            options: {
+                curly: true,
+                eqeqeq: true,
+                immed: true,
+                latedef: true,
+                newcap: true,
+                noarg: true,
+                sub: true,
+                undef: true,
+                boss: true,
+                eqnull: true,
+                node: true,
+                es5: true}
+        },
+        nodeunit: {
+            tests: ['test/*.test.js']
         }
     });
+
+    require('time-grunt')(grunt);
+
+    grunt.loadNpmTasks("grunt-contrib-concat");
+    grunt.loadNpmTasks("grunt-contrib-jshint");
+    grunt.loadNpmTasks("grunt-contrib-clean");
+    grunt.loadNpmTasks('grunt-bumpup');
+    grunt.loadNpmTasks("grunt-karma");
+    grunt.loadNpmTasks('grunt-contrib-nodeunit');
 
     grunt.registerTask("release-bump", function(type) {
         grunt.task.run("bumpup:" + (type ? type : "patch"));
