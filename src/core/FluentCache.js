@@ -1,4 +1,4 @@
-fluent.FluentCache = function(commentParser, excludes) {
+fluent.core.FluentCache = function(commentParser, excludes) {
     var cacheMap = {}, basicMetadataExp = /^\/\*\*[^~]+\*\//;
 
     this.cache = function(scope) {
@@ -28,6 +28,6 @@ fluent.FluentCache = function(commentParser, excludes) {
 
 };
 
-fluent.FluentCache.Factory = function(commentParser, excludes) {
-    return fluent.FluentCache(commentParser, excludes);
+fluent.core.FluentCache.Factory = function(commentParser, excludes) {
+    return fluent.core.FluentCache(commentParser, excludes);
 };

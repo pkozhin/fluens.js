@@ -1,4 +1,4 @@
-fluent.Fluent = function(cacheFactory, parserFactory, injectorFactory, contextFactory) {
+fluent.core.Fluent = function(cacheFactory, parserFactory, injectorFactory, contextFactory) {
 
     var description = 'Interpolate templates with your data and inject the result to the desired location.',
         cache = cacheFactory(commentParser, ["vendors", "styles"]),
@@ -6,14 +6,36 @@ fluent.Fluent = function(cacheFactory, parserFactory, injectorFactory, contextFa
         injector = injectorFactory(),
         self = this;
 
+    // TODO: Refactor parsers assignment.
     var defaultScopes = {
-        scripts: {parser: parser.scripts, injector: injector.common},
-        sources: {parser: parser.sources, injector: injector.common},
-        vendors: {parser: parser.vendors, injector: injector.common},
-        styles: {parser: parser.styles, injector: injector.common},
-        namespaces: {parser: parser.namespaces, injector: injector.common},
-        dependencies: {parser: parser.dependencies, injector: injector.common},
-        commands: {parser: parser.commands, injector: injector.commands}
+        scripts: {
+            parser: parser.scripts,
+            injector: injector.common
+        },
+        sources: {
+            parser: parser.sources,
+            injector: injector.common
+        },
+        vendors: {
+            parser: parser.vendors,
+            injector: injector.common
+        },
+        styles: {
+            parser: parser.styles,
+            injector: injector.common
+        },
+        namespaces: {
+            parser: parser.namespaces,
+            injector: injector.common
+        },
+        dependencies: {
+            parser: parser.dependencies,
+            injector: injector.common
+        },
+        commands: {
+            parser: parser.commands,
+            injector: injector.commands
+        }
     };
 
     this.cacheContext = function(scopes, contextType) {

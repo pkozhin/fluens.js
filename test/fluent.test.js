@@ -1,6 +1,7 @@
 'use strict';
 
-var grunt = require('grunt');
+var grunt = require('grunt'),
+    fluent = require('../tasks/fluent.js');
 
 /*
  ======== A Handy Little Nodeunit Reference ========

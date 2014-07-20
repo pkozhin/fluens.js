@@ -1,6 +1,6 @@
-fluent.FluentFacade = function(fluent) {
+fluent.core.FluentFacade = function(fluent) {
 
     this.run = function(type, context) {
-        fluent.run(type, context);
+        fluent.core.run(type, context);
     };
 };

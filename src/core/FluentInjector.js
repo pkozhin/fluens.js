@@ -1,4 +1,4 @@
-fluent.FluentInjector = function() {
+fluent.core.FluentInjector = function() {
     var markerExp = "<fluent:T(.*)>(.*)<\/fluent:T>",
         markerReplacer = "<fluent:T A>\nC\n<\/fluent:T>";
 
@@ -30,6 +30,6 @@ fluent.FluentInjector = function() {
     };
 };
 
-fluent.FluentInjector.Factory = function() {
-    return fluent.FluentInjector();
+fluent.core.FluentInjector.Factory = function() {
+    return fluent.core.FluentInjector();
 };
