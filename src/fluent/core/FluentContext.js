@@ -4,7 +4,3 @@ fluent.core.FluentContext = function(scope, scopes, cache, item) {
     this.cache = cache;
     this.item = item;
 };
-
-fluent.core.FluentContext.Factory = function(scope, scopes, cache, item) {
-    return fluent.core.FluentContext(scope, scopes, cache, item);
-};

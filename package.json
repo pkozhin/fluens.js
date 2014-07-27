@@ -3,7 +3,7 @@
     "name": "fluentjs",
     "title": "FluentJS",
     "homepage": "https://github.com/pkozhin/fluent.js",
-    "version": "0.0.3",
+    "version": "0.0.12",
     "copyright": "Copyright (c) 2014 Pavel Kozhin",
     "contributors": [
         "Pavel Kozhin <kpaul.box@gmail.com>"

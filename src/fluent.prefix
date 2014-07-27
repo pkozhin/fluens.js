@@ -5,6 +5,8 @@ module.exports = function(grunt) {
 var fluent = {};
 fluent.core = {};
 fluent.parser = {};
+fluent.injector = {};
+fluent.common = {};
 
 var _ = require("lodash"),
     commentParser = require("comment-parser");

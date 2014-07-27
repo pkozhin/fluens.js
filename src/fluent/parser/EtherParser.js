@@ -1,4 +1,4 @@
-fluent.parser.EtherParser = function() {
+fluent.parser.EtherParser = function(model) {
 
     this.commands = function(context) {
         return null;

@@ -19,15 +19,12 @@ fluent.core.FluentCache = function(commentParser, excludes) {
                     content: content,
                     metadata: metadata
                 });
-            });
+            }
+        );
+        scope.cachedContent = cached;
     };
 
     this.item = function(key) {
         return cacheMap[key] || null;
     };
-
-};
-
-fluent.core.FluentCache.Factory = function(commentParser, excludes) {
-    return fluent.core.FluentCache(commentParser, excludes);
 };

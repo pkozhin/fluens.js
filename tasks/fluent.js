@@ -1,5 +1,5 @@
 /**
-* FluentJS - v0.0.3
+* FluentJS - v0.0.12
 * Copyright (c) 2014 Pavel Kozhin
 * License: MIT, https://github.com/pkozhin/fluent.js/blob/master/LICENSE
 */
@@ -7,73 +7,125 @@ module.exports = function(grunt) {
 
 "use strict";
 
-var fluent = {},
-    _ = require("lodash"),
+var fluent = {};
+fluent.core = {};
+fluent.parser = {};
+fluent.injector = {};
+fluent.common = {};
+
+var _ = require("lodash"),
     commentParser = require("comment-parser");
 
-fluent.Fluent = function(cacheFactory, parserFactory, injectorFactory, contextFactory) {
+fluent.common.Model = function() {
+    this.markerExp = "<fluent:T(.*)>(.*)<\/fluent:T>";
+    this.markerReplacer = "<fluent:T A>\nC\n<\/fluent:T>";
+    this.scriptTpl = '<script src="C"></script>';
+    this.styleTpl = '<link href="C" rel="stylesheet">';
+};
 
-    var description = 'Interpolate templates with your data and inject the result to the desired location.',
-        cache = cacheFactory(commentParser, ["vendors", "styles"]),
-        parser = parserFactory(),
-        injector = injectorFactory(),
-        self = this;
+fluent.common.Validator = function() {
 
-    var defaultScopes = {
-        scripts: {parser: parser.scripts, injector: injector.common},
-        sources: {parser: parser.sources, injector: injector.common},
-        vendors: {parser: parser.vendors, injector: injector.common},
-        styles: {parser: parser.styles, injector: injector.common},
-        namespaces: {parser: parser.namespaces, injector: injector.common},
-        dependencies: {parser: parser.dependencies, injector: injector.common},
-        commands: {parser: parser.commands, injector: injector.commands}
+    this.validateScope = function(scope, type) {
+        if (!scope.paths || !scope.cwd) {
+            throw new Error("Scope must have mandatory 'paths' and 'cwd' params. Scope '" + type + "'.");
+        }
+        if (!_.isArray(scope.paths)) {
+            throw new Error("Scope parameter 'paths' should an array. Scope '" + type + "'.");
+        }
+        if (scope.cwd && !_.isString(scope.cwd)) {
+            throw new Error("Scope parameter 'cwd' should be a string. Scope '" + type + "'.");
+        }
+        if (!_.isFunction(scope.parse)) {
+            throw new Error("Scope parameter 'parse' should be a function. Scope '"+ type +"'");
+        }
+        if (!_.isFunction(scope.inject)) {
+            throw new Error("Scope parameter 'inject' should be a function. Scope '" + type + "'.");
+        }
+        if (scope.type || scope.context || scope.parsedContent || scope.cachedContent) {
+            throw new Error("Scope has reserved properties: " +
+                "type, context, parsedContext, cachedContent which should not be assigned initially.");
+        }
     };
+};
 
-    this.cacheContext = function(scopes, contextType) {
+fluent.core.Composer = function(commentParser) {
 
-        _.forIn(scopes, function(scope, type) {
-            if (scope.paths) {
-                if (!_.isArray(scope.paths)) {
-                    throw new Error("Scope parameter 'paths' should an array. Scope '"+ type +"'");
-                }
-                if (scope.cwd && !_.isString(scope.cwd)) {
-                    throw new Error("Scope parameter 'cwd' should be a string. Scope '"+ type +"'");
-                }
-                scope.type = type;
-                scope.context = contextType;
-                cache.cache(scope);
+    var cache = new fluent.core.FluentCache(commentParser, ["vendors", "styles"]),
+        scopes = new fluent.core.FluentScopes(),
+        model = new fluent.common.Model(),
+        validator = new fluent.common.Validator(),
+        main = new fluent.core.Fluent(model, cache, scopes, validator);
+
+    _.each(fluent.parser, function(Type) {
+        var obj = new Type(model);
+        _.forIn(obj, function(value, key) {
+            if (_.isFunction(value)) {
+                scopes.parser(key, _.bind(value, obj));
             }
         });
+    });
+
+    _.each(fluent.injector, function(Type) {
+        var obj = new Type(model);
+        _.forIn(obj, function(value, key) {
+            if (_.isFunction(value)) {
+                scopes.injector(key, _.bind(value, obj));
+            }
+        });
+    });
+
+    this.facade = new fluent.FluentFacade(main);
+};
+
+fluent.core.Fluent = function(model, cache, scopes, validator) {
+
+    var description = 'Interpolate templates with your data and inject the result to the desired location.',
+        self = this;
+
+    this.initContext = function(items, contextType) {
+        var result = [];
+        _.forIn(items, function(item, type) {
+            validator.validateScope(item, type);
+
+            var scope = self.scopeFactory(type, contextType, item);
+            result.push(scope);
+            cache.cache(scope);
+        });
+        return result;
     };
 
     this.parseContext = function(scopes) {
-        _.forIn(scopes, function(scope, type){
-            if (!_.isFunction(scope.parser)) {
-                throw new Error("Scope parameter 'parse' should be a function. Scope '"+ type +"'");
-            }
-            scope.parsed = scope.parser(contextFactory(scope, scopes, cache, null));
+        _.each(scopes, function(scope){
+            var context = self.contextFactory(scope, scopes, cache, null);
+            scope.parsedContent = scope.parse(context);
         });
     };
 
     this.injectContext = function(scopes) {
-        _.forIn(scopes, function(scope, type) {
-            _.forEach(cache.item(type), function(item){
-                if (item.content && _.isFunction(scope.injector)) {
-                    scope.injector(contextFactory(scope, scopes, cache, item));
+        _.each(scopes, function(scope) {
+            _.forEach(scope.cachedContent, function(item){
+                if (item.content) {
+                    scope.inject(self.contextFactory(scope, scopes, cache, item));
                 }
             });
         });
     };
 
-    this.run = function(type, context) {
-        if (!context) {
-            throw new Error("Task '"+ type +"' is not configured.");
-        }
-        var scopes = _.merge({}, defaultScopes, context);
+    this.contextFactory = function(scope, scopes, cache, item) {
+        return new fluent.core.FluentContext(scope, scopes, cache, item);
+    };
 
-        this.cacheContext(scopes, type);
-        this.parseContext(scopes, type);
-        this.injectContext(scopes, type);
+    this.scopeFactory = function(type, contextType, params) {
+        return new fluent.core.FluentScope(type, contextType, params);
+    };
+
+    this.run = function(type, context) {
+        if (!context) { throw new Error("Task '"+ type +"' is not configured."); }
+
+        var items = this.initContext(_.merge({}, scopes.snapshot(), context));
+
+        this.parseContext(items);
+        this.injectContext(items);
     };
 
     grunt.registerMultiTask('fluent', description, function() {
@@ -81,7 +133,7 @@ fluent.Fluent = function(cacheFactory, parserFactory, injectorFactory, contextFa
     });
 };
 
-fluent.FluentCache = function(commentParser, excludes) {
+fluent.core.FluentCache = function(commentParser, excludes) {
     var cacheMap = {}, basicMetadataExp = /^\/\*\*[^~]+\*\//;
 
     this.cache = function(scope) {
@@ -102,59 +154,88 @@ fluent.FluentCache = function(commentParser, excludes) {
                     content: content,
                     metadata: metadata
                 });
-            });
+            }
+        );
+        scope.cachedContent = cached;
     };
 
     this.item = function(key) {
         return cacheMap[key] || null;
     };
-
 };
 
-fluent.FluentCache.Factory = function(commentParser, excludes) {
-    return fluent.FluentCache(commentParser, excludes);
-};
-
-fluent.FluentContext = function(scope, scopes, cache, item) {
+fluent.core.FluentContext = function(scope, scopes, cache, item) {
     this.scope = scope;
     this.scopes = scopes;
     this.cache = cache;
     this.item = item;
 };
 
-fluent.FluentContext.Factory = function(scope, scopes, cache, item) {
-    return fluent.FluentContext(scope, scopes, cache, item);
-};
-
-fluent.FluentFacade = function(fluent) {
+fluent.core.FluentFacade = function(fluent) {
 
     this.run = function(type, context) {
-        fluent.run(type, context);
+        fluent.core.run(type, context);
     };
 };
 
-fluent.FluentInjector = function() {
-    var markerExp = "<fluent:T(.*)>(.*)<\/fluent:T>",
-        markerReplacer = "<fluent:T A>\nC\n<\/fluent:T>";
+fluent.core.FluentScope = function(type, contextType, params) {
+    this.type = type;
+    this.context = contextType;
+    this.paths = params.paths;
+    this.cwd = params.cwd;
+    this.parse = params.parse;
+    this.inject = params.inject;
+    this.parsedContent = null;
+    this.cachedContent = null;
+};
 
-    this.common = function(context) {
-        var re = markerExp.replace("T", context.scope.type),
-            rex = new RegExp(re),
-            item = context.item,
-            match = item.content.match(rex),
-            scope = context.scope;
+fluent.core.FluentScopes = function() {
 
-        if (match) {
-            var newContent = markerReplacer.replace("T", scope.type)
-                .replace("A", match[1]).replace("C", scope.parsed);
-            grunt.file.write(item.cwd + item.path, item.content.replace(rex, newContent));
+    var parsers = {}, injectors = {}, map;
 
-            grunt.log.writeln("File '" + item.path + "' processed.");
+    this.parser = function(key, fn) {
+        if (!_.isFunction(fn)) {
+            return parsers[key] ? parsers[key] : null;
         }
+        if (parsers[key]) {
+            throw new Error("Parser '"+key+"' already exists.");
+        }
+        parsers[key] = fn;
+        map = null;
     };
 
+    this.injector = function(key, fn) {
+        if (!_.isFunction(fn)) {
+            return injectors[key] ? parsers[key] : null;
+        }
+        if (injectors[key]) {
+            throw new Error("Injector '"+key+"' already exists.");
+        }
+        injectors[key] = fn;
+        map = null;
+    };
+
+    this.snapshot = function() {
+        if (map) {
+            return map;
+        }
+        map = {};
+        _.forIn(parsers, function(value, key) {
+            if (!map[key]) { map[key] = {};}
+            map[key].parse = value;
+        });
+        _.forIn(injectors, function(value, key) {
+            if (!map[key]) { map[key] = {};}
+            map[key].inject = value;
+        });
+        return map;
+    };
+};
+
+fluent.injector.EtherInjector = function(model) {
+
     this.commands = function(context) {
-        var re = markerExp.replace("T", context.scope.type),
+        var re = model.markerExp.replace("T", context.scope.type),
             rex = new RegExp(re),
             item = context.item,
             match = item.content.match(rex);
@@ -165,47 +246,36 @@ fluent.FluentInjector = function() {
     };
 };
 
-fluent.FluentInjector.Factory = function() {
-    return fluent.FluentInjector();
+fluent.injector.FluentInjector = function(model) {
+
+    var commonParse = function(context) {
+        var re = model.markerExp.replace("T", context.scope.type),
+            rex = new RegExp(re),
+            item = context.item,
+            match = item.content.match(rex),
+            scope = context.scope;
+
+        if (match) {
+            var newContent = model.markerReplacer.replace("T", scope.type)
+                .replace("A", match[1]).replace("C", scope.parsedContent);
+            grunt.file.write(item.cwd + item.path, item.content.replace(rex, newContent));
+
+            grunt.log.writeln("File '" + item.path + "' processed.");
+        }
+    };
+
+    this.sources = commonParse;
+    this.vendors = commonParse;
+    this.styles = commonParse;
+    this.namespaces = commonParse;
+    this.dependencies = commonParse;
 };
 
-fluent.FluentParser = function() {
-    var scriptTpl = '<script src="C"></script>',
-        styleTpl = '<link href="C" rel="stylesheet">',
-        classDefinitionRegEx = /^(.[^\*]+?)function.+\{/m,
+fluent.parser.AngularParser = function(model) {
+
+    var classDefinitionRegEx = /^(.[^\*]+?)function.+\{/m,
         angularTypes = {Controller: true, Service: true, Factory: true, Value: true,
             Provider: true, Constant: true, Directive: true, Filter: true};
-
-    var parseCommon = function(items) {
-        return items ? _.map(items, function(item){
-            return scriptTpl.replace('C', item.path);
-        }).join('\n') : null;
-    };
-
-    this.scripts = function(context) {
-        return parseCommon(context.cache.item("vendors") && context.cache.item("sources") ?
-            context.cache.item("vendors").concat(context.cache.item("sources")) : null);
-    };
-
-    this.sources = function(context) {
-        return parseCommon(context.cache.item("sources"));
-    };
-
-    this.vendors = function(context) {
-        return parseCommon(context.cache.item("vendors"));
-    };
-
-    this.styles = function(context) {
-        return context.cache.item("styles") ? _.map(context.cache.item("styles"), function(item){
-            return styleTpl.replace('C', item.path);
-        }).join("\n") : null;
-    };
-
-    this.namespaces = function(context) {
-        return context.cache.item("namespaces") ? '\n' + _.map(context.cache.item("namespaces"), function(item){
-            return item.path;
-        }).join('\n') : null;
-    };
 
     this.dependencies = function(context) {
         return context.cache.item("dependencies") ? '\n' +
@@ -213,18 +283,18 @@ fluent.FluentParser = function() {
                 var result, moduleName, dependencyType, dependencyName, path,
                     classDefinition = item.content.match(classDefinitionRegEx);
 
-                if (classDefinition && classDefinition[1].indexOf(item.path.slice(0, -3)) == -1) {
+                if (classDefinition && classDefinition[1].indexOf(item.path.slice(0, -3)) === -1) {
                     throw new Error("Dependency package should match folder structure: " +
                         item.path + ' vs. ' + classDefinition[1]);
                 }
 
                 if (item.metadata && _.isArray(item.metadata[0].tags)) {
                     _.forEach(item.metadata[0].tags, function(tag) {
-                        if (tag.tag == "module") {
+                        if (tag.tag === "module") {
                             if (!tag.name) { throw new Error("Module name is required for '"+ item.path +"'.");}
                             moduleName = tag.name;
                         }
-                        if (tag.tag == "dependency") {
+                        if (tag.tag === "dependency") {
                             if (!tag.type) { throw new Error("Dependency type is required for '"+ item.path +"'.");}
                             dependencyType = tag.type;
                         }
@@ -237,24 +307,52 @@ fluent.FluentParser = function() {
                         }
                         path = item.path.slice(0, -3);
                         dependencyType = dependencyType.toLowerCase();
-                        dependencyName = dependencyType == "controller" ? path.match(/.+\.(.+)$/)[1] : path;
+                        dependencyName = dependencyType === "controller" ? path.match(/.+\.(.+)$/)[1] : path;
                         result = moduleName + '.'+ dependencyType +'("'+ dependencyName +'", '+ path +');';
                     }
                 }
 
                 return result;
-        })).join('\n') : null;
+            })).join('\n') : null;
     };
+};
+
+fluent.parser.EtherParser = function(model) {
 
     this.commands = function(context) {
         return null;
     };
 };
 
-fluent.FluentParser.Factory = function() {
-    return fluent.FluentParser();
+fluent.parser.FluentParser = function(model) {
+
+    var parseScripts = function(items) {
+        return items ? _.map(items, function(item){
+            return model.scriptTpl.replace('C', item.path);
+        }).join('\n') : null;
+    };
+
+    this.sources = function(context) {
+        return parseScripts(context.cache.item("sources"));
+    };
+
+    this.vendors = function(context) {
+        return parseScripts(context.cache.item("vendors"));
+    };
+
+    this.styles = function(context) {
+        return context.cache.item("styles") ? _.map(context.cache.item("styles"), function(item){
+            return model.styleTpl.replace('C', item.path);
+        }).join("\n") : null;
+    };
+
+    this.namespaces = function(context) {
+        return context.cache.item("namespaces") ? '\n' + _.map(context.cache.item("namespaces"), function(item){
+            return item.path;
+        }).join('\n') : null;
+    };
 };
 
-return new fluent.FluentFacade(new fluent.Fluent(fluent.FluentCache.Factory, fluent.FluentParser.Factory, fluent.FluentInjector.Factory, fluent.FluentContext.Factory));
+return new fluent.core.Composer(commentParser).facade;
 
 };

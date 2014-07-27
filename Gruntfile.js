@@ -62,10 +62,15 @@ module.exports = function (grunt) {
                 boss: true,
                 eqnull: true,
                 node: true,
-                es5: true}
+                es5: false}
         },
         nodeunit: {
             tests: ['test/*.test.js']
+        },
+        fluent: {
+            dev: {
+
+            }
         }
     });
 
@@ -81,6 +86,10 @@ module.exports = function (grunt) {
     grunt.registerTask("release-bump", function(type) {
         grunt.task.run("bumpup:" + (type ? type : "patch"));
         grunt.task.run("release");
+    });
+
+    grunt.registerTask("test_fluent", function(){
+
     });
 
     grunt.registerTask("release", ["clean:fluent", "concat:fluent", "jshint:fluent"]);

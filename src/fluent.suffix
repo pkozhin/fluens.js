@@ -1,3 +1,3 @@
-return new fluent.FluentFacade(new fluent.Fluent(fluent.FluentCache.Factory, fluent.FluentParser.Factory, fluent.FluentInjector.Factory, fluent.FluentContext.Factory));
+return new fluent.core.Composer(commentParser).facade;
 
 };
