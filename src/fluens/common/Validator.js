@@ -1,10 +1,7 @@
-fluent.common.Validator = function() {
+fluens.common.Validator = function() {
 
     this.validateScope = function(scope, type) {
-        if (!scope.paths || !scope.cwd) {
-            throw new Error("Scope must have mandatory 'paths' and 'cwd' params. Scope '" + type + "'.");
-        }
-        if (!_.isArray(scope.paths)) {
+        if (scope.paths && !_.isArray(scope.paths)) {
             throw new Error("Scope parameter 'paths' should an array. Scope '" + type + "'.");
         }
         if (scope.cwd && !_.isString(scope.cwd)) {

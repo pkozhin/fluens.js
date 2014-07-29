@@ -1,4 +1,4 @@
-fluent.parser.FluentParser = function(model) {
+fluens.parser.FluensParser = function(model) {
 
     var parseScripts = function(items) {
         return items ? _.map(items, function(item){

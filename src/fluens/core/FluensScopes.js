@@ -1,4 +1,4 @@
-fluent.core.FluentScopes = function() {
+fluens.core.FluensScopes = function() {
 
     var parsers = {}, injectors = {}, map;
 

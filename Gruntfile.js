@@ -1,30 +1,59 @@
+/*
+ * fluens
+ * https://github.com/pkozhin/fluens.js
+ *
+ * Copyright (c) 2014 Pavel Kozhin
+ * Licensed under the MIT license.
+ */
+
+'use strict';
+
 module.exports = function (grunt) {
+    // load all npm grunt tasks
+    require('load-grunt-tasks')(grunt);
 
-    var config;
-
-    grunt.initConfig(config = {
-        releaseDir: "tasks",
+    // Project configuration.
+    grunt.initConfig({
         pkg: grunt.file.readJSON("package.json"),
         license: "License: <%= grunt.config.get('pkg.license.type') %>, <%= grunt.config.get('pkg.license.url') %>",
         copyright: "<%= grunt.config.get('pkg.copyright') %>",
         version: "<%= grunt.config.get('pkg.version') %>",
         src: {
             sources: ["src/**/*.js"],
-            prefix: ["src/fluent.prefix"],
-            suffix: ["src/fluent.suffix"]
+            prefix: ["src/fluens.prefix"],
+            suffix: ["src/fluens.suffix"]
         },
-        fluent: {
+        config: {
+            releaseDir: "tasks",
             name: "<%= grunt.config.get('pkg.title') %>",
-            fileName: "fluent",
-            file: "<%= releaseDir %>/<%= fluent.fileName %>.js",
-            fileMin: "<%= releaseDir %>/<%= fluent.fileName %>.min.js",
+            fileName: "fluens",
+            file: "<%= config.releaseDir %>/<%= config.fileName %>.js",
             banner:
                 "/**\n" +
-                "* <%= fluent.name %> - v<%= version %>\n" +
+                "* <%= config.name %> - v<%= version %>\n" +
                 "* <%= copyright %>\n" +
                 "* <%= license %>\n" +
                 "*/\n"
         },
+
+        clean: {
+            tests: ['tmp'],
+            fluens: ["<%= config.releaseDir %>/*.js"]
+        },
+
+        concat: {
+            options: {
+                process: true
+            },
+            fluens: {
+                src: ["<%= src.prefix %>", "<%= src.sources %>", "<%= src.suffix %>"],
+                dest: "<%= config.file %>",
+                options: {
+                    banner: "<%= config.banner %>"
+                }
+            }
+        },
+
         bumpup: {
             options: {
                 updateProps: {
@@ -33,64 +62,47 @@ module.exports = function (grunt) {
             },
             file: 'package.json'
         },
-        clean: {
-            fluent: ["<%= fluent.file %>", "<%= fluent.fileMin %>"]
-        },
-        concat: {
+
+        jshint: {
+            fluens: ["<%= config.file %>"],
             options: {
-                process: true
-            },
-            fluent: {
-                src: ["<%= src.prefix %>", "<%= src.sources %>", "<%= src.suffix %>"],
-                dest: "<%= fluent.file %>",
-                options: {
-                    banner: "<%= fluent.banner %>"
+                jshintrc: '.jshintrc',
+                reporter: require('jshint-stylish')
+            }
+        },
+
+        // Configuration to be run (and then tested).
+        fluens: {
+            test: {
+                options: {},
+                sources: {
+                    cwd: "./test/src/example/src",
+                    paths: ['fred/*.js', '*.html', '*.js']
                 }
             }
         },
-        jshint: {
-            fluent: ["<%= fluent.file %>"],
-            options: {
-                curly: true,
-                eqeqeq: true,
-                immed: true,
-                latedef: true,
-                newcap: true,
-                noarg: true,
-                sub: true,
-                undef: true,
-                boss: true,
-                eqnull: true,
-                node: true,
-                es5: false}
-        },
+
+        // Unit tests.
         nodeunit: {
             tests: ['test/*.test.js']
-        },
-        fluent: {
-            dev: {
-
-            }
         }
+
     });
 
-    require('time-grunt')(grunt);
+    // Actually load this plugin's task(s).
+    grunt.loadTasks('tasks');
 
-    grunt.loadNpmTasks("grunt-contrib-concat");
-    grunt.loadNpmTasks("grunt-contrib-jshint");
-    grunt.loadNpmTasks("grunt-contrib-clean");
-    grunt.loadNpmTasks('grunt-bumpup');
-    grunt.loadNpmTasks("grunt-karma");
-    grunt.loadNpmTasks('grunt-contrib-nodeunit');
+    require('time-grunt')(grunt);
 
     grunt.registerTask("release-bump", function(type) {
         grunt.task.run("bumpup:" + (type ? type : "patch"));
         grunt.task.run("release");
     });
 
-    grunt.registerTask("test_fluent", function(){
+    grunt.registerTask('test', ['fluens', 'nodeunit']);
 
-    });
+    // By default, lint and run all tests.
+    grunt.registerTask('default', ["clean", "concat", "jshint", "release-bump", "test"]);
+    grunt.registerTask("release", ["clean", "concat", "jshint"]);
 
-    grunt.registerTask("release", ["clean:fluent", "concat:fluent", "jshint:fluent"]);
 };

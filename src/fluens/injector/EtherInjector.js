@@ -1,4 +1,4 @@
-fluent.injector.EtherInjector = function(model) {
+fluens.injector.EtherInjector = function(model) {
 
     this.commands = function(context) {
         var re = model.markerExp.replace("T", context.scope.type),

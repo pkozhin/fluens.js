@@ -2,11 +2,11 @@ module.exports = function(grunt) {
 
 "use strict";
 
-var fluent = {};
-fluent.core = {};
-fluent.parser = {};
-fluent.injector = {};
-fluent.common = {};
+var fluens = {};
+fluens.core = {};
+fluens.parser = {};
+fluens.injector = {};
+fluens.common = {};
 
 var _ = require("lodash"),
     commentParser = require("comment-parser");

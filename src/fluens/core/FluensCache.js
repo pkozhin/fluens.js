@@ -1,4 +1,4 @@
-fluent.core.FluentCache = function(commentParser, excludes) {
+fluens.core.FluensCache = function(model, commentParser, excludes) {
     var cacheMap = {}, basicMetadataExp = /^\/\*\*[^~]+\*\//;
 
     this.cache = function(scope) {
@@ -9,12 +9,13 @@ fluent.core.FluentCache = function(commentParser, excludes) {
                 var content = null, rawMetadata, metadata;
 
                 if (_.indexOf(scope.excludes || excludes, scope.type) === -1) {
-                    content = grunt.file.read(scope.cwd + path);
+                    content = grunt.file.read(model.stripslashes(scope.cwd + "/"  +path));
                     rawMetadata = content.match(basicMetadataExp);
                     metadata = rawMetadata ? commentParser(rawMetadata[0]) : null;
                 }
                 cached.push({
                     path: path,
+                    qPath: model.stripslashes(scope.cwd + "/" + path),
                     cwd: scope.cwd,
                     content: content,
                     metadata: metadata

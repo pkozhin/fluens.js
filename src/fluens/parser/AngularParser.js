@@ -1,4 +1,4 @@
-fluent.parser.AngularParser = function(model) {
+fluens.parser.AngularParser = function(model) {
 
     var classDefinitionRegEx = /^(.[^\*]+?)function.+\{/m,
         angularTypes = {Controller: true, Service: true, Factory: true, Value: true,

@@ -1,4 +1,4 @@
-fluent.core.FluentScope = function(type, contextType, params) {
+fluens.core.FluensScope = function(type, contextType, params) {
     this.type = type;
     this.context = contextType;
     this.paths = params.paths;
