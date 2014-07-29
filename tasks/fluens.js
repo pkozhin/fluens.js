@@ -17,8 +17,10 @@ var _ = require("lodash"),
     commentParser = require("comment-parser");
 
 fluens.common.Model = function() {
-    this.markerExp = "([ \t]*)<fluens:T(.*)>([^~]*)<\/fluens:T>";
-    this.markerReplacer = "<fluens:T A>\nC\n<\/fluens:T>";
+    this.htmlMarkerExp = "([ \t]*).+<!--<fluens:T(.*)>-->([^~]*).+<!--<\/fluens:T>-->"; // jshint ignore:line
+    this.htmlMarkerReplacer = "<!--<fluens:T A>-->\nC\n<!--<\/fluens:T>-->";
+    this.jsMarkerExp = "([ \t]*).+\/\*<fluens:T(.*)>\*\/([^~]*).+\/\*<\/fluens:T>\*\/"; // jshint ignore:line
+    this.jsMarkerReplacer = "/*<fluens:T A>*/\nC\n/*<\/fluens:T>*/";
     this.scriptTpl = '<script src="C"></script>';
     this.styleTpl = '<link href="C" rel="stylesheet">';
     this.stripslashes = function(value) {
@@ -253,21 +255,37 @@ fluens.injector.EtherInjector = function(model) {
 
 fluens.injector.FluensInjector = function(model) {
 
+    var replace = function(match, replacer, rex, scope, item) {
+        var result = replacer.replace(/T/g, scope.type)
+            .replace(" A", match[2].match(/\w+/) ? " " + match[2] : "")
+            .replace("C", scope.parsedContent);
+
+        result = match[1] + result.split("\n").join("\n" + match[1]);
+        return item.content.replace(rex, result);
+    };
+
     var commonParse = function(context) {
-        var re = model.markerExp.replace(/T/g, context.scope.type),
-            rex = new RegExp(re),
+        var htmlRe = model.htmlMarkerExp.replace(/T/g, context.scope.type),
+            htmlRex = new RegExp(htmlRe),
+            jsRe = model.jsMarkerExp.replace(/T/g, context.scope.type),
+            jsRex = new RegExp(jsRe),
             item = context.item,
-            match = item.content.match(rex),
-            scope = context.scope;
+            htmlMatch = item.content.match(htmlRex),
+            jsMatch = item.content.match(jsRex),
+            scope = context.scope,
+            newContent;
 
-        if (match) {
-            var newContent = model.markerReplacer.replace(/T/g, scope.type)
-                .replace(" A", match[2].match(/\w+/) ? " " + match[2] : "")
-                .replace("C", scope.parsedContent);
+        if (htmlMatch) {
+            newContent = replace(htmlMatch, model.htmlMarkerReplacer,
+                htmlRex, scope, item);
+        } else if (jsMatch) {
+            newContent = replace(jsMatch, model.jsMarkerReplacer,
+                jsRex, scope, item);
+        }
 
-            newContent = match[1] + newContent.split("\n").join("\n" + match[1]);
-            grunt.file.write(item.qPath, item.content.replace(rex, newContent));
-            grunt.log.writeln("Fluens: file '" + item.path + "' processed.");
+        if (newContent) {
+            grunt.file.write(item.qPath, newContent);
+            grunt.log.writeln("Fluens: file " + item.path + " processed.");
         }
     };
 
