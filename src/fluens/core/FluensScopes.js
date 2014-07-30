@@ -31,11 +31,11 @@ fluens.core.FluensScopes = function() {
         map = {};
         _.forIn(parsers, function(value, key) {
             if (!map[key]) { map[key] = {};}
-            map[key].parse = value;
+            map[key].parse = {parser: value};
         });
         _.forIn(injectors, function(value, key) {
             if (!map[key]) { map[key] = {};}
-            map[key].inject = value;
+            map[key].inject = {injector: value};
         });
         return map;
     };

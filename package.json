@@ -1,7 +1,7 @@
 {
     "name": "fluens",
     "title": "FluensJS",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "Interpolate templates with your data and inject the result to the desired location.",
     "homepage": "https://github.com/pkozhin/fluens.js",
     "repository": "https://github.com/pkozhin/fluens.js.git",

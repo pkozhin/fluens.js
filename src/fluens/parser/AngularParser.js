@@ -5,12 +5,13 @@ fluens.parser.AngularParser = function(model) {
             Provider: true, Constant: true, Directive: true, Filter: true};
 
     this.dependencies = function(context) {
-        return context.cache.item("dependencies") ? '\n' +
-            _.compact(_.map(context.cache.item("dependencies"), function(item){
-                var result, moduleName, dependencyType, dependencyName, path,
+        return context.cache.parsed("dependencies") ?
+            _.compact(_.map(context.cache.parsed("dependencies"), function(item){
+                var result, moduleName, dependencyType, dependencyName,
+                    path = item.path.slice(0, -3).replace(/\//g, "."),
                     classDefinition = item.content.match(classDefinitionRegEx);
 
-                if (classDefinition && classDefinition[1].indexOf(item.path.slice(0, -3)) === -1) {
+                if (classDefinition && classDefinition[1].indexOf(path) === -1) {
                     throw new Error("Dependency package should match folder structure: " +
                         item.path + ' vs. ' + classDefinition[1]);
                 }
@@ -32,7 +33,6 @@ fluens.parser.AngularParser = function(model) {
                         if (dependencyType && !angularTypes[dependencyType]) {
                             throw new Error("Invalid dependency type - '"+dependencyType+"'.");
                         }
-                        path = item.path.slice(0, -3);
                         dependencyType = dependencyType.toLowerCase();
                         dependencyName = dependencyType === "controller" ? path.match(/.+\.(.+)$/)[1] : path;
                         result = moduleName + '.'+ dependencyType +'("'+ dependencyName +'", '+ path +');';

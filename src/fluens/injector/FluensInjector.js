@@ -3,17 +3,15 @@ fluens.injector.FluensInjector = function(model) {
     var replace = function(match, replacer, rex, scope, item) {
         var result = replacer.replace(/T/g, scope.type)
             .replace(" A", match[2].match(/\w+/) ? " " + match[2] : "")
-            .replace("C", scope.parsedContent);
+            .replace("C", scope.parse.parsedContent);
 
         result = match[1] + result.split("\n").join("\n" + match[1]);
         return item.content.replace(rex, result);
     };
 
     var commonParse = function(context) {
-        var htmlRe = model.htmlMarkerExp.replace(/T/g, context.scope.type),
-            htmlRex = new RegExp(htmlRe),
-            jsRe = model.jsMarkerExp.replace(/T/g, context.scope.type),
-            jsRex = new RegExp(jsRe),
+        var htmlRex = new RegExp(model.htmlMarkerExp.source.replace(/T/g, context.scope.type)),
+            jsRex = new RegExp(model.jsMarkerExp.source.replace(/T/g, context.scope.type)),
             item = context.item,
             htmlMatch = item.content.match(htmlRex),
             jsMatch = item.content.match(jsRex),

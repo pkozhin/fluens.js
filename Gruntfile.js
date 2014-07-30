@@ -74,10 +74,25 @@ module.exports = function (grunt) {
         // Configuration to be run (and then tested).
         fluens: {
             test: {
-                options: {},
                 sources: {
-                    cwd: "./test/src/example/src",
-                    paths: ['fred/*.js', '*.html', '*.js']
+                    parse: {
+                        cwd: "./test/src/example/src",
+                        paths: ['fred/*.js', '*.js']
+                    },
+                    inject: {
+                        cwd: "./test/src/example/src",
+                        paths: ['*.html']
+                    }
+                },
+                dependencies: {
+                    parse: {
+                        cwd: "./test/src/example/src",
+                        paths: ['deps/*.js']
+                    },
+                    inject: {
+                        cwd: "./test/src/example/src",
+                        paths: ['*.js']
+                    }
                 }
             }
         },

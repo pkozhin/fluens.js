@@ -10,7 +10,7 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
                 validator.validateScope(item, type);
                 var scope = self.scopeFactory(type, contextType, item);
 
-                if (scope.paths) {
+                if (scope.parse.paths) {
                     result.push(scope);
                     cache.cache(scope);
                 }
@@ -22,15 +22,15 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
     this.parseContext = function(scopes) {
         _.each(scopes, function(scope){
             var context = self.contextFactory(scope, scopes, cache, null);
-            scope.parsedContent = scope.parse(context);
+            scope.parse.parsedContent = scope.parse.parser(context);
         });
     };
 
     this.injectContext = function(scopes) {
         _.each(scopes, function(scope) {
-            _.forEach(scope.cachedContent, function(item){
+            _.forEach(scope.inject.cachedContent, function(item){
                 if (item.content) {
-                    scope.inject(self.contextFactory(scope, scopes, cache, item));
+                    scope.inject.injector(self.contextFactory(scope, scopes, cache, item));
                 }
             });
         });

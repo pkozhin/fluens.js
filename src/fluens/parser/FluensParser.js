@@ -7,21 +7,21 @@ fluens.parser.FluensParser = function(model) {
     };
 
     this.sources = function(context) {
-        return parseScripts(context.cache.item("sources"));
+        return parseScripts(context.cache.parsed("sources"));
     };
 
     this.vendors = function(context) {
-        return parseScripts(context.cache.item("vendors"));
+        return parseScripts(context.cache.parsed("vendors"));
     };
 
     this.styles = function(context) {
-        return context.cache.item("styles") ? _.map(context.cache.item("styles"), function(item){
+        return context.cache.parsed("styles") ? _.map(context.cache.parsed("styles"), function(item){
             return model.styleTpl.replace('C', item.path);
         }).join("\n") : null;
     };
 
     this.namespaces = function(context) {
-        return context.cache.item("namespaces") ? '\n' + _.map(context.cache.item("namespaces"), function(item){
+        return context.cache.parsed("namespaces") ? '\n' + _.map(context.cache.parsed("namespaces"), function(item){
             return item.path;
         }).join('\n') : null;
     };

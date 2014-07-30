@@ -17,9 +17,9 @@ var _ = require("lodash"),
     commentParser = require("comment-parser");
 
 fluens.common.Model = function() {
-    this.htmlMarkerExp = "([ \t]*).+<!--<fluens:T(.*)>-->([^~]*).+<!--<\/fluens:T>-->"; // jshint ignore:line
+    this.htmlMarkerExp = /([ \t]*).*<!--<fluens:T(.*)>-->([^~]*).*<!--<\/fluens:T>-->/;
     this.htmlMarkerReplacer = "<!--<fluens:T A>-->\nC\n<!--<\/fluens:T>-->";
-    this.jsMarkerExp = "([ \t]*).+\/\*<fluens:T(.*)>\*\/([^~]*).+\/\*<\/fluens:T>\*\/"; // jshint ignore:line
+    this.jsMarkerExp = /([ \t]*).*\/\*<fluens:T(.*)>\*\/([^~]*).*\/\*<\/fluens:T>\*\//;
     this.jsMarkerReplacer = "/*<fluens:T A>*/\nC\n/*<\/fluens:T>*/";
     this.scriptTpl = '<script src="C"></script>';
     this.styleTpl = '<link href="C" rel="stylesheet">';
@@ -30,22 +30,36 @@ fluens.common.Model = function() {
 
 fluens.common.Validator = function() {
 
-    this.validateScope = function(scope, type) {
-        if (scope.paths && !_.isArray(scope.paths)) {
-            throw new Error("Scope parameter 'paths' should an array. Scope '" + type + "'.");
+    var validatePhase = function(scope, scopeType, phase, phaseType) {
+        if (phase.paths && !_.isArray(phase.paths)) {
+            throw new Error("Phase parameter 'paths' should be array. Scope '" +
+                scopeType + "', phase '"+ phaseType +"'.");
         }
-        if (scope.cwd && !_.isString(scope.cwd)) {
-            throw new Error("Scope parameter 'cwd' should be a string. Scope '" + type + "'.");
+        if (phase.cwd && !_.isString(phase.cwd)) {
+            throw new Error("Phase parameter 'cwd' should be a string. Scope '" +
+                scopeType + "', phase '"+ phaseType +"'.");
         }
-        if (!_.isFunction(scope.parse)) {
-            throw new Error("Scope parameter 'parse' should be a function. Scope '"+ type +"'");
-        }
-        if (!_.isFunction(scope.inject)) {
-            throw new Error("Scope parameter 'inject' should be a function. Scope '" + type + "'.");
-        }
-        if (scope.type || scope.context || scope.parsedContent || scope.cachedContent) {
+
+        if (scope.type || scope.context) {
             throw new Error("Scope has reserved properties: " +
-                "type, context, parsedContext, cachedContent which should not be assigned initially.");
+                "type, context, which should not be assigned initially.");
+        }
+        if (scope.parsedContent || phase.cachedContent) {
+            throw new Error("Phase has reserved properties: " +
+                "parsedContext, cachedContent which should not be assigned initially.");
+        }
+    };
+
+    this.validateScope = function(scope, type) {
+        validatePhase(scope, type, scope.parse, "parse");
+        if (!_.isFunction(scope.parse.parser)) {
+            throw new Error("Phase parameter 'parser' should be a function. Scope '"+
+                type +"', phase 'parse'.");
+        }
+        validatePhase(scope, type, scope.inject, "inject");
+        if (!_.isFunction(scope.inject.injector)) {
+            throw new Error("Phase parameter 'injector' should be a function. Scope '" +
+                type + "', phase 'inject'.");
         }
     };
 };
@@ -91,7 +105,7 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
                 validator.validateScope(item, type);
                 var scope = self.scopeFactory(type, contextType, item);
 
-                if (scope.paths) {
+                if (scope.parse.paths) {
                     result.push(scope);
                     cache.cache(scope);
                 }
@@ -103,15 +117,15 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
     this.parseContext = function(scopes) {
         _.each(scopes, function(scope){
             var context = self.contextFactory(scope, scopes, cache, null);
-            scope.parsedContent = scope.parse(context);
+            scope.parse.parsedContent = scope.parse.parser(context);
         });
     };
 
     this.injectContext = function(scopes) {
         _.each(scopes, function(scope) {
-            _.forEach(scope.cachedContent, function(item){
+            _.forEach(scope.inject.cachedContent, function(item){
                 if (item.content) {
-                    scope.inject(self.contextFactory(scope, scopes, cache, item));
+                    scope.inject.injector(self.contextFactory(scope, scopes, cache, item));
                 }
             });
         });
@@ -142,32 +156,42 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
 fluens.core.FluensCache = function(model, commentParser, excludes) {
     var cacheMap = {}, basicMetadataExp = /^\/\*\*[^~]+\*\//;
 
-    this.cache = function(scope) {
-        var cached = (cacheMap[scope.type] = []);
+    var cacheItems = function(scope, phase, phaseType) {
+        if (!cacheMap[scope.type]) { cacheMap[scope.type] = {parse:{}, inject:{}}; }
+        var cached = (cacheMap[scope.type][phaseType] = []);
 
-        grunt.file.expand({filter: "isFile", cwd: scope.cwd}, scope.paths)
+        grunt.file.expand({filter: "isFile", cwd: phase.cwd}, phase.paths)
             .forEach(function(path) {
                 var content = null, rawMetadata, metadata;
 
                 if (_.indexOf(scope.excludes || excludes, scope.type) === -1) {
-                    content = grunt.file.read(model.stripslashes(scope.cwd + "/"  +path));
+                    content = grunt.file.read(model.stripslashes(phase.cwd + "/"  +path));
                     rawMetadata = content.match(basicMetadataExp);
                     metadata = rawMetadata ? commentParser(rawMetadata[0]) : null;
                 }
                 cached.push({
                     path: path,
-                    qPath: model.stripslashes(scope.cwd + "/" + path),
-                    cwd: scope.cwd,
+                    qPath: model.stripslashes(phase.cwd + "/" + path),
+                    cwd: phase.cwd,
                     content: content,
                     metadata: metadata
                 });
             }
         );
-        scope.cachedContent = cached;
+        phase.cachedContent = cached;
     };
 
-    this.item = function(key) {
-        return cacheMap[key] || null;
+    this.cache = function(scope) {
+        cacheItems(scope, scope.parse, "parse");
+        cacheItems(scope, scope.inject, "inject");
+    };
+
+    this.parsed = function(key) {
+        return cacheMap[key].parse || null;
+    };
+
+    this.injected = function(key) {
+        return cacheMap[key].inject || null;
     };
 };
 
@@ -188,12 +212,8 @@ fluens.core.FluensFacade = function(fluens) {
 fluens.core.FluensScope = function(type, contextType, params) {
     this.type = type;
     this.context = contextType;
-    this.paths = params.paths;
-    this.cwd = params.cwd;
     this.parse = params.parse;
     this.inject = params.inject;
-    this.parsedContent = null;
-    this.cachedContent = null;
 };
 
 fluens.core.FluensScopes = function() {
@@ -229,11 +249,11 @@ fluens.core.FluensScopes = function() {
         map = {};
         _.forIn(parsers, function(value, key) {
             if (!map[key]) { map[key] = {};}
-            map[key].parse = value;
+            map[key].parse = {parser: value};
         });
         _.forIn(injectors, function(value, key) {
             if (!map[key]) { map[key] = {};}
-            map[key].inject = value;
+            map[key].inject = {injector: value};
         });
         return map;
     };
@@ -258,17 +278,15 @@ fluens.injector.FluensInjector = function(model) {
     var replace = function(match, replacer, rex, scope, item) {
         var result = replacer.replace(/T/g, scope.type)
             .replace(" A", match[2].match(/\w+/) ? " " + match[2] : "")
-            .replace("C", scope.parsedContent);
+            .replace("C", scope.parse.parsedContent);
 
         result = match[1] + result.split("\n").join("\n" + match[1]);
         return item.content.replace(rex, result);
     };
 
     var commonParse = function(context) {
-        var htmlRe = model.htmlMarkerExp.replace(/T/g, context.scope.type),
-            htmlRex = new RegExp(htmlRe),
-            jsRe = model.jsMarkerExp.replace(/T/g, context.scope.type),
-            jsRex = new RegExp(jsRe),
+        var htmlRex = new RegExp(model.htmlMarkerExp.source.replace(/T/g, context.scope.type)),
+            jsRex = new RegExp(model.jsMarkerExp.source.replace(/T/g, context.scope.type)),
             item = context.item,
             htmlMatch = item.content.match(htmlRex),
             jsMatch = item.content.match(jsRex),
@@ -303,12 +321,13 @@ fluens.parser.AngularParser = function(model) {
             Provider: true, Constant: true, Directive: true, Filter: true};
 
     this.dependencies = function(context) {
-        return context.cache.item("dependencies") ? '\n' +
-            _.compact(_.map(context.cache.item("dependencies"), function(item){
-                var result, moduleName, dependencyType, dependencyName, path,
+        return context.cache.parsed("dependencies") ?
+            _.compact(_.map(context.cache.parsed("dependencies"), function(item){
+                var result, moduleName, dependencyType, dependencyName,
+                    path = item.path.slice(0, -3).replace(/\//g, "."),
                     classDefinition = item.content.match(classDefinitionRegEx);
 
-                if (classDefinition && classDefinition[1].indexOf(item.path.slice(0, -3)) === -1) {
+                if (classDefinition && classDefinition[1].indexOf(path) === -1) {
                     throw new Error("Dependency package should match folder structure: " +
                         item.path + ' vs. ' + classDefinition[1]);
                 }
@@ -330,7 +349,6 @@ fluens.parser.AngularParser = function(model) {
                         if (dependencyType && !angularTypes[dependencyType]) {
                             throw new Error("Invalid dependency type - '"+dependencyType+"'.");
                         }
-                        path = item.path.slice(0, -3);
                         dependencyType = dependencyType.toLowerCase();
                         dependencyName = dependencyType === "controller" ? path.match(/.+\.(.+)$/)[1] : path;
                         result = moduleName + '.'+ dependencyType +'("'+ dependencyName +'", '+ path +');';
@@ -358,21 +376,21 @@ fluens.parser.FluensParser = function(model) {
     };
 
     this.sources = function(context) {
-        return parseScripts(context.cache.item("sources"));
+        return parseScripts(context.cache.parsed("sources"));
     };
 
     this.vendors = function(context) {
-        return parseScripts(context.cache.item("vendors"));
+        return parseScripts(context.cache.parsed("vendors"));
     };
 
     this.styles = function(context) {
-        return context.cache.item("styles") ? _.map(context.cache.item("styles"), function(item){
+        return context.cache.parsed("styles") ? _.map(context.cache.parsed("styles"), function(item){
             return model.styleTpl.replace('C', item.path);
         }).join("\n") : null;
     };
 
     this.namespaces = function(context) {
-        return context.cache.item("namespaces") ? '\n' + _.map(context.cache.item("namespaces"), function(item){
+        return context.cache.parsed("namespaces") ? '\n' + _.map(context.cache.parsed("namespaces"), function(item){
             return item.path;
         }).join('\n') : null;
     };
