@@ -93,6 +93,16 @@ module.exports = function (grunt) {
                         cwd: "./test/src/example/src",
                         paths: ['*.js']
                     }
+                },
+                styles: {
+                    parse: {
+                        cwd: "./test/src/example/src",
+                        paths: ['styles/*.css']
+                    },
+                    inject: {
+                        cwd: "./test/src/example/src",
+                        paths: ['*.html']
+                    }
                 }
             }
         },

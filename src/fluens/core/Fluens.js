@@ -3,6 +3,9 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
     var description = 'Interpolate templates with your data and inject the result to the desired location.',
         self = this;
 
+
+    // TODO: regexp helper to manage with rex substitutions etc.
+
     this.initContext = function(items, contextType) {
         var result = [];
         _.forIn(items, function(item, type) {
@@ -10,7 +13,7 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
                 validator.validateScope(item, type);
                 var scope = self.scopeFactory(type, contextType, item);
 
-                if (scope.parse.paths) {
+                if (scope.isActive()) {
                     result.push(scope);
                     cache.cache(scope);
                 }
@@ -30,7 +33,8 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
         _.each(scopes, function(scope) {
             _.forEach(scope.inject.cachedContent, function(item){
                 if (item.content) {
-                    scope.inject.injector(self.contextFactory(scope, scopes, cache, item));
+                    item.content = scope.inject.injector(
+                        self.contextFactory(scope, scopes, cache, item));
                 }
             });
         });

@@ -9,7 +9,7 @@ fluens.injector.FluensInjector = function(model) {
         return item.content.replace(rex, result);
     };
 
-    var commonParse = function(context) {
+    var commonInject = function(context) {
         var htmlRex = new RegExp(model.htmlMarkerExp.source.replace(/T/g, context.scope.type)),
             jsRex = new RegExp(model.jsMarkerExp.source.replace(/T/g, context.scope.type)),
             item = context.item,
@@ -30,11 +30,12 @@ fluens.injector.FluensInjector = function(model) {
             grunt.file.write(item.qPath, newContent);
             grunt.log.writeln("Fluens: file " + item.path + " processed.");
         }
+        return newContent;
     };
 
-    this.sources = commonParse;
-    this.vendors = commonParse;
-    this.styles = commonParse;
-    this.namespaces = commonParse;
-    this.dependencies = commonParse;
+    this.sources = commonInject;
+    this.vendors = commonInject;
+    this.styles = commonInject;
+    this.namespaces = commonInject;
+    this.dependencies = commonInject;
 };

@@ -1,5 +1,5 @@
 /**
-* FluensJS - v0.0.1
+* FluensJS - v0.0.2
 * Copyright (c) 2014 Pavel Kozhin
 * License: MIT, https://github.com/pkozhin/fluens.js/blob/master/LICENSE
 */
@@ -67,7 +67,7 @@ fluens.common.Validator = function() {
 fluens.core.Composer = function(commentParser) {
 
     var model = new fluens.common.Model(),
-        cache = new fluens.core.FluensCache(model, commentParser, ["vendors", "styles"]),
+        cache = new fluens.core.FluensCache(model, commentParser, ["vendors"]),
         scopes = new fluens.core.FluensScopes(),
         validator = new fluens.common.Validator(),
         main = new fluens.core.Fluens(model, cache, scopes, validator);
@@ -98,6 +98,9 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
     var description = 'Interpolate templates with your data and inject the result to the desired location.',
         self = this;
 
+
+    // TODO: regexp helper to manage with rex substitutions etc.
+
     this.initContext = function(items, contextType) {
         var result = [];
         _.forIn(items, function(item, type) {
@@ -105,7 +108,7 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
                 validator.validateScope(item, type);
                 var scope = self.scopeFactory(type, contextType, item);
 
-                if (scope.parse.paths) {
+                if (scope.isActive()) {
                     result.push(scope);
                     cache.cache(scope);
                 }
@@ -125,7 +128,8 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
         _.each(scopes, function(scope) {
             _.forEach(scope.inject.cachedContent, function(item){
                 if (item.content) {
-                    scope.inject.injector(self.contextFactory(scope, scopes, cache, item));
+                    item.content = scope.inject.injector(
+                        self.contextFactory(scope, scopes, cache, item));
                 }
             });
         });
@@ -214,6 +218,10 @@ fluens.core.FluensScope = function(type, contextType, params) {
     this.context = contextType;
     this.parse = params.parse;
     this.inject = params.inject;
+
+    this.isActive = function() {
+        return Boolean(this.parse && this.parse.paths && this.parse.paths.length);
+    };
 };
 
 fluens.core.FluensScopes = function() {
@@ -284,7 +292,7 @@ fluens.injector.FluensInjector = function(model) {
         return item.content.replace(rex, result);
     };
 
-    var commonParse = function(context) {
+    var commonInject = function(context) {
         var htmlRex = new RegExp(model.htmlMarkerExp.source.replace(/T/g, context.scope.type)),
             jsRex = new RegExp(model.jsMarkerExp.source.replace(/T/g, context.scope.type)),
             item = context.item,
@@ -305,13 +313,14 @@ fluens.injector.FluensInjector = function(model) {
             grunt.file.write(item.qPath, newContent);
             grunt.log.writeln("Fluens: file " + item.path + " processed.");
         }
+        return newContent;
     };
 
-    this.sources = commonParse;
-    this.vendors = commonParse;
-    this.styles = commonParse;
-    this.namespaces = commonParse;
-    this.dependencies = commonParse;
+    this.sources = commonInject;
+    this.vendors = commonInject;
+    this.styles = commonInject;
+    this.namespaces = commonInject;
+    this.dependencies = commonInject;
 };
 
 fluens.parser.AngularParser = function(model) {
