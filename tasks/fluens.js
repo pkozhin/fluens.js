@@ -1,5 +1,5 @@
 /**
-* FluensJS - v0.0.2
+* FluensJS - v0.0.2-0.1
 * Copyright (c) 2014 Pavel Kozhin
 * License: MIT, https://github.com/pkozhin/fluens.js/blob/master/LICENSE
 */
@@ -399,8 +399,8 @@ fluens.parser.FluensParser = function(model) {
     };
 
     this.namespaces = function(context) {
-        return context.cache.parsed("namespaces") ? '\n' + _.map(context.cache.parsed("namespaces"), function(item){
-            return item.path;
+        return context.cache.parsed("namespaces") ? _.map(context.cache.parsed("namespaces"), function(item){
+            return "window." + item.path.replace(/\//g, ".") + " = {};";
         }).join('\n') : null;
     };
 };

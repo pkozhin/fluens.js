@@ -103,6 +103,16 @@ module.exports = function (grunt) {
                         cwd: "./test/src/example/src",
                         paths: ['*.html']
                     }
+                },
+                namespaces: {
+                    parse: {
+                        cwd: "./test/src/example/src",
+                        paths: ['deps/*.js', 'fred/*.js']
+                    },
+                    inject: {
+                        cwd: "./test/src/example/src",
+                        paths: ['*.js']
+                    }
                 }
             }
         },

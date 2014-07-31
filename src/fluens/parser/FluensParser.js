@@ -21,8 +21,8 @@ fluens.parser.FluensParser = function(model) {
     };
 
     this.namespaces = function(context) {
-        return context.cache.parsed("namespaces") ? '\n' + _.map(context.cache.parsed("namespaces"), function(item){
-            return item.path;
+        return context.cache.parsed("namespaces") ? _.map(context.cache.parsed("namespaces"), function(item){
+            return "window." + item.path.replace(/\//g, ".") + " = {};";
         }).join('\n') : null;
     };
 };
