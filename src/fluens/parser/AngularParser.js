@@ -5,8 +5,7 @@ fluens.parser.AngularParser = function(model) {
             Provider: true, Constant: true, Directive: true, Filter: true};
 
     this.dependencies = function(context) {
-        return context.cache.parsed("dependencies") ?
-            _.compact(_.map(context.cache.parsed("dependencies"), function(item){
+        return _.compact(_.map(context.cache.getParse("dependencies"), function(item){
                 var result, moduleName, dependencyType, dependencyName,
                     path = item.path.slice(0, -3).replace(/\//g, "."),
                     classDefinition = item.content.match(classDefinitionRegEx);
@@ -40,6 +39,6 @@ fluens.parser.AngularParser = function(model) {
                 }
 
                 return result;
-            })).join('\n') : null;
+            })).join('\n');
     };
 };

@@ -3,7 +3,6 @@
     /*</fluens:dependencies>*/
 
     /*<fluens:namespaces>*/
-    window.deps.MyController.js = {};
-    window.fred.Bar.js = {};
-    window.fred.Foo.js = {};
+    window.deps = {};
+    window.fred = {};
     /*</fluens:namespaces>*/

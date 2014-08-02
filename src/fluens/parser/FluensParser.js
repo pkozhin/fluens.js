@@ -7,22 +7,22 @@ fluens.parser.FluensParser = function(model) {
     };
 
     this.sources = function(context) {
-        return parseScripts(context.cache.parsed("sources"));
+        return parseScripts(context.cache.getParse("sources"));
     };
 
     this.vendors = function(context) {
-        return parseScripts(context.cache.parsed("vendors"));
+        return parseScripts(context.cache.getParse("vendors"));
     };
 
     this.styles = function(context) {
-        return context.cache.parsed("styles") ? _.map(context.cache.parsed("styles"), function(item){
+        return _.map(context.cache.getParse("styles"), function(item){
             return model.styleTpl.replace('C', item.path);
-        }).join("\n") : null;
+        }).join("\n");
     };
 
     this.namespaces = function(context) {
-        return context.cache.parsed("namespaces") ? _.map(context.cache.parsed("namespaces"), function(item){
+        return _.map(context.cache.getParse("namespaces"), function(item){
             return "window." + item.path.replace(/\//g, ".") + " = {};";
-        }).join('\n') : null;
+        }).join('\n');
     };
 };

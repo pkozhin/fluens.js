@@ -106,8 +106,9 @@ module.exports = function (grunt) {
                 },
                 namespaces: {
                     parse: {
+                        filter: "isDirectory",
                         cwd: "./test/src/example/src",
-                        paths: ['deps/*.js', 'fred/*.js']
+                        paths: ['deps/**', 'fred/**']
                     },
                     inject: {
                         cwd: "./test/src/example/src",
