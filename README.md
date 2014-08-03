@@ -1,6 +1,7 @@
 # fluens
 
 > Interpolate templates with your data and inject the result to the desired location.
+> This plugin is not in a stable version yet and can be changed without backward compatibility in the nearest future!
 
 ## Getting Started
 This plugin requires Grunt.
@@ -37,20 +38,44 @@ grunt.initConfig({
 
 ### Usage Examples
 
-#### Default Options
-In this example, the default options are used to do something with whatever. So if the `testing` file has the content `Testing` and the `123` file had the content `1 2 3`, the generated result would be `Testing, 1 2 3.`
+You can check Gruntfile.js and task `fluens` for the working examples.
 
 ```js
 grunt.initConfig({
   fluens: {
-      test: {
-          options: {},
+      dev: {
           sources: {
-              cwd: "./test/src/example/src",
-              paths: ['fred/*.js', '*.html', '*.js']
+              parse: {
+                  cwd: "./test/src/example/src",
+                  paths: ['fred/*.js', '*.js']
+              },
+              inject: {
+                  cwd: "./test/src/example/src",
+                  paths: ['*.html']
+              }
+          },
+          styles: {
+              parse: {
+                  cwd: "./test/src/example/src",
+                  paths: ['styles/*.css']
+              },
+              inject: {
+                  cwd: "./test/src/example/src",
+                  paths: ['*.html']
+              }
+          },
+          namespaces: {
+              parse: {
+                  filter: "isDirectory",
+                  cwd: "./test/src/example/src",
+                  paths: ['deps/**', 'fred/**']
+              },
+              inject: {
+                  cwd: "./test/src/example/src",
+                  paths: ['*.js']
+              }
           }
       }
-  }
 })
 ```
 
