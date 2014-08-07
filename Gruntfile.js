@@ -74,7 +74,13 @@ module.exports = function (grunt) {
         // Configuration to be run (and then tested).
         fluens: {
             test: {
-                options: {cwd: "./test/src/example/src"},
+                options: {
+                    cwd: "./test/src/example/src",
+                    phase: {
+                        parse: {priority: 1},
+                        inject: {priority: 2}
+                    }
+                },
                 sources: {
                     parse: {
                         cwd: "./test/src/example/src",

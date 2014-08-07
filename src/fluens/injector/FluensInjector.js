@@ -38,4 +38,6 @@ fluens.injector.FluensInjector = function(model) {
     this.styles = commonInject;
     this.namespaces = commonInject;
     this.dependencies = commonInject;
+
+    this.phases = {inject: this};
 };

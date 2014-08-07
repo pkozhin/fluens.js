@@ -25,4 +25,6 @@ fluens.parser.FluensParser = function(model) {
             return "window." + item.path.replace(/\//g, ".") + " = {};";
         }).join('\n');
     };
+
+    this.phases = {parse: this};
 };

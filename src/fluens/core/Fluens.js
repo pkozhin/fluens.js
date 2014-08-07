@@ -3,20 +3,34 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
     var description = 'Interpolate templates with your data and inject the result to the desired location.',
         self = this;
 
+    var defaultOptions = {
+        phase: {
+            parse: {priority: 1},
+            inject: {priority: 2}
+        }
+    };
+
+    var defaultPriority = 5;
+
     // TODO: regexp helper to manage with rex substitutions etc.
 
     this.initContext = function(context, contextType) {
-        var result = [], scope;
-        _.forIn(context, function(item, type) {
+        var result = [], scope, options = _.pluck(context, "options") || {};
+
+        options = _.merge(options, defaultOptions);
+
+        _.forIn(context, function(item, scopeType) {
+            var phases = [], priority;
+
             if (type !== "options") {
-                item.parse.action = item.parse.action || scopes.parser(type);
-                item.inject.action = item.inject.action || scopes.injector(type);
+                _.forIn(item, function(phase, phaseType) {
+                    phase.action = phase.action || scopes.action(scopeType, phaseType);
+                    priority = options[phaseType] ? options[phaseType].priority : defaultPriority;
+                    phases.push(self.phaseFactory(phaseType, phase, priority));
+                });
 
-                scope = self.scopeFactory(type, contextType,
-                    self.phaseFactory(fluens.core.FluensPhase.TYPE_PARSE, item.parse),
-                    self.phaseFactory(fluens.core.FluensPhase.TYPE_INJECT, item.inject));
-
-                validator.validateScope(item, type);
+                scope = self.scopeFactory(type, contextType, phases);
+                validator.validateScope(scope, scopeType);
 
                 result.push(scope);
             }
@@ -30,6 +44,11 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
                 cache.cacheScope(scope);
             }
         });
+    };
+
+    this.processContext = function(scopes) {
+        // TODO: Implement iterating through phases by priority instead of parse and inject!!!!
+
     };
 
     this.parseContext = function(scopes) {
@@ -58,8 +77,8 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
         return new fluens.core.FluensScope(type, contextType, parsePhase, injectPhase);
     };
 
-    this.phaseFactory = function(type, action) {
-        return new fluens.core.FluensPhase(type, action);
+    this.phaseFactory = function(type, action, priority) {
+        return new fluens.core.FluensPhase(type, action, priority);
     };
 
     this.run = function(type, context, options) {
@@ -68,8 +87,11 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
         var items = this.initContext(context, type);
 
         this.cacheContext(items);
-        this.parseContext(items);
-        this.injectContext(items);
+        this.processContext(items);
+
+
+        /*this.parseContext(items);
+        this.injectContext(items);*/
     };
 
     grunt.registerMultiTask('fluens', description, function(){

@@ -41,4 +41,6 @@ fluens.parser.AngularParser = function(model) {
                 return result;
             })).join('\n');
     };
+
+    this.phases = {parse:this};
 };

@@ -10,4 +10,6 @@ fluens.injector.EtherInjector = function(model) {
 
         }
     };
+
+    this.phases = {inject: this};
 };
