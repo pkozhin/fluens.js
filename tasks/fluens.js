@@ -1,5 +1,5 @@
 /**
-* FluensJS - v0.0.3-0.2
+* FluensJS - v0.0.4-0.2
 * Copyright (c) 2014 Pavel Kozhin
 * License: MIT, https://github.com/pkozhin/fluens.js/blob/master/LICENSE
 */
@@ -22,6 +22,12 @@ fluens.common.Model = function() {
     this.jsMarkerReplacer = "/*<fluens:T A>*/\nC\n/*<\/fluens:T>*/";
     this.scriptTpl = '<script src="C"></script>';
     this.styleTpl = '<link href="C" rel="stylesheet">';
+    this.linefeed = grunt.util.linefeed;
+
+    this.normalizelf = function(value) {
+        return grunt.util.normalizelf(value);
+    };
+
     this.stripslashes = function(value) {
         return value.replace(/\/\//g, "/");
     };
@@ -484,7 +490,7 @@ fluens.processor.FluensInjector = function(model) {
                 jsRex, facade, item);
         }
         if (htmlMatch || jsMatch) {
-            grunt.file.write(item.qPath, newContent);
+            grunt.file.write(item.qPath, model.normalizelf(newContent));
             grunt.verbose.writeln("Fluens: file " + item.path +
                 " injected within '"+ facade.scope.type +"' scope.");
         }

@@ -1,5 +1,8 @@
 fluens.core.Fluens = function(model, cache, scopes, validator) {
 
+    var OPTIONS = "options",
+        DEFAULT_SCOPE = "default";
+
     var description = 'Interpolate templates with your data and inject the result to the desired location.',
         self = this;
 
@@ -12,23 +15,24 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
 
     var defaultPriority = 5;
 
-    this.initContext = function(context, contextType) {
-        var result = [], scope, options = _.pick(context, "options").options || {};
+    this.initContext = function(context, contextType, options) {
+        var result = [], scope;
 
         options = _.merge(defaultOptions, options);
 
         _.forIn(context, function(item, scopeType) {
             var phases = [], priority;
 
-            if (scopeType !== "options") {
+            if (scopeType !== OPTIONS && scopeType !== DEFAULT_SCOPE) {
                 scope = self.scopeFactory(scopeType, contextType, phases);
 
                 _.forIn(item, function(phase, phaseType) {
                     var processor = scopes.processor(scopeType, phaseType);
 
-                    phase.action = phase.action ||
+                    phase.action = _.isFunction(phase.action) ? phase.action :
                         (processor ? _.bind(processor.action, processor) : null);
-                    phase.validate = phase.validate ||
+
+                    phase.validate = _.isFunction(phase.validate) ? phase.validate :
                         (processor ? _.bind(processor.validate, processor) : null);
 
                     if (!phase.cwd) {
@@ -93,7 +97,7 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
     this.run = function(type, context, options) {
         if (!context) { throw new Error("Task '"+ type +"' is not configured."); }
 
-        var items = this.initContext(context, type);
+        var items = this.initContext(context, type, options);
 
         this.cacheContext(items);
         this.processContext(items);
@@ -114,6 +118,6 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
     };
 
     grunt.registerMultiTask('fluens', description, function(){
-        self.run(this.target, this.data, this.options());
+        self.run(this.target, this.data, this.options() || {});
     });
 };

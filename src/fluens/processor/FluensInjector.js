@@ -24,7 +24,7 @@ fluens.processor.FluensInjector = function(model) {
                 jsRex, facade, item);
         }
         if (htmlMatch || jsMatch) {
-            grunt.file.write(item.qPath, newContent);
+            grunt.file.write(item.qPath, model.normalizelf(newContent));
             grunt.verbose.writeln("Fluens: file " + item.path +
                 " injected within '"+ facade.scope.type +"' scope.");
         }
@@ -46,11 +46,8 @@ fluens.processor.FluensInjector = function(model) {
 
     this.phases = {
         inject: {
-            sources: this,
-            vendors: this,
-            styles: this,
-            namespaces: this,
-            dependencies: this
+            // "default" means that it handles phase "inject" for any scope.
+            default: this
         }
     };
 };
