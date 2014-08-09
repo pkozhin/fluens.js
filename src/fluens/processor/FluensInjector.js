@@ -25,8 +25,8 @@ fluens.processor.FluensInjector = function(model) {
         }
         if (htmlMatch || jsMatch) {
             grunt.file.write(item.qPath, newContent);
-            grunt.log.writeln("Fluens: file " + item.path +
-                " injected. Scope type: "+ facade.scope.type +".");
+            grunt.verbose.writeln("Fluens: file " + item.path +
+                " injected within '"+ facade.scope.type +"' scope.");
         }
         return newContent;
     };
@@ -34,11 +34,7 @@ fluens.processor.FluensInjector = function(model) {
     this.action = function(facade) {
         _.forIn(facade.cache.getPhase(facade.scope.type, facade.phase.type),
             function(item) {
-                //console.log("Before: ", item.path);
-                //console.log(item.content);
                 item.content = injectItem(facade, item);
-                //console.log("After: ");
-                //console.log(item.content);
             }
         );
         return null;

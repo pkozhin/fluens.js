@@ -83,7 +83,6 @@ module.exports = function (grunt) {
                 },
                 sources: {
                     parse: {
-                        cwd: "./test/src/example/src",
                         paths: ['fred/*.js', '*.js']
                     },
                     inject: {
@@ -93,11 +92,9 @@ module.exports = function (grunt) {
                 },
                 dependencies: {
                     parse: {
-                        cwd: "./test/src/example/src",
                         paths: ['deps/*.js']
                     },
                     inject: {
-                        cwd: "./test/src/example/src",
                         paths: ['*.js']
                     }
                 },
@@ -107,18 +104,15 @@ module.exports = function (grunt) {
                         paths: ['styles/*.css']
                     },
                     inject: {
-                        cwd: "./test/src/example/src",
                         paths: ['*.html']
                     }
                 },
                 namespaces: {
                     parse: {
                         filter: "isDirectory",
-                        cwd: "./test/src/example/src",
                         paths: ['deps/**', 'fred/**']
                     },
                     inject: {
-                        cwd: "./test/src/example/src",
                         paths: ['*.js']
                     }
                 }

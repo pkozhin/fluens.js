@@ -82,17 +82,7 @@ fluens.core.Composer = function(commentParser) {
         validator = new fluens.common.Validator(),
         main = new fluens.core.Fluens(model, cache, scopes, validator);
 
-    _.each(_.values(fluens.processor), function(Type) {
-        var obj = new Type(model);
-        validator.validateProcessor(obj);
-
-        _.forIn(obj.phases, function(phase, phaseType) {
-            _.forIn(phase, function(processor, scopeType) {
-                validator.validatePhaseProcessor(processor);
-                scopes.processor(scopeType, phaseType, processor);
-            });
-        });
-    });
+    main.addProcessors(fluens.processor);
 
     this.facade = new fluens.core.FluensFacade(main);
 };
@@ -112,9 +102,10 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
     var defaultPriority = 5;
 
     this.initContext = function(context, contextType) {
-        var result = [], scope, options = _.pluck(context, "options") || {};
+        var result = [], scope, options = _.pick(context, "options").options || {};
 
-        options = _.merge(options, defaultOptions);
+        options = _.merge(defaultOptions, options);
+
         _.forIn(context, function(item, scopeType) {
             var phases = [], priority;
 
@@ -124,9 +115,17 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
                 _.forIn(item, function(phase, phaseType) {
                     var processor = scopes.processor(scopeType, phaseType);
 
-                    phase.action = phase.action || (processor ? _.bind(processor.action, processor) : null);
-                    phase.validate = phase.validate || (processor ? _.bind(processor.validate, processor) : null);
-                    priority = options[phaseType] ? options[phaseType].priority : defaultPriority;
+                    phase.action = phase.action ||
+                        (processor ? _.bind(processor.action, processor) : null);
+                    phase.validate = phase.validate ||
+                        (processor ? _.bind(processor.validate, processor) : null);
+
+                    if (!phase.cwd) {
+                        phase.cwd = options.cwd;
+                    }
+                    priority = phase.priority || (options[phaseType] ?
+                        options[phaseType].priority : defaultPriority);
+
                     phases.push(self.phaseFactory(phaseType, phase, scope, priority));
                 });
 
@@ -145,22 +144,24 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
 
     this.processContext = function(scopes) {
         var phases = [];
+
         _.each(scopes, function(scope) {
             phases = phases.concat(scope.phases);
         });
+
         phases = _.sortBy(phases, function(phase){
             return phase.priority;
         });
+
         _.each(phases, function(phase) {
             if (phase.isActive()) {
                 var actionFacade = self.actionFacadeFactory(phase.scope, phase, scopes, cache);
 
                 if (phase.validate(actionFacade)) {
-                    console.log("Phase validated. ", phase.type);
                     phase.content =  phase.action(actionFacade);
-                    if (phase.type === "parse") {
-                        console.log("@ ", phase.content);
-                    }
+                } else {
+                    grunt.verbose.writeln("Fluens: phase '"+ phase.type +
+                        "' is not valid within '"+ phase.scope.type +"' scope.");
                 }
             }
         });
@@ -185,6 +186,20 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
 
         this.cacheContext(items);
         this.processContext(items);
+    };
+
+    this.addProcessors = function(items) {
+        _.each(_.values(items), function(Type) {
+            var obj = new Type(model);
+            validator.validateProcessor(obj);
+
+            _.forIn(obj.phases, function(phase, phaseType) {
+                _.forIn(phase, function(processor, scopeType) {
+                    validator.validatePhaseProcessor(processor);
+                    scopes.processor(scopeType, phaseType, processor);
+                });
+            });
+        });
     };
 
     grunt.registerMultiTask('fluens', description, function(){
@@ -270,6 +285,10 @@ fluens.core.FluensFacade = function(fluens) {
     this.run = function(type, context) {
         fluens.core.run(type, context);
     };
+
+    this.addProcessors = function(items) {
+        fluens.addProcessors(items);
+    };
 };
 
 fluens.core.FluensPhase = function(type, params, scope, priority) {
@@ -318,8 +337,8 @@ fluens.core.FluensScopes = function() {
         }
 
         if (map[scopeType][phaseType]) {
-            throw new Error("Processor for scope '"+scopeType+"' and phase '"+
-                phaseType+"' already exists.");
+            grunt.verbose.writeln("Fluens: Overriding processor for scope '"+
+                scopeType+"' and phase '"+ phaseType +"'.");
         }
 
         map[scopeType][phaseType] = processor;
@@ -466,8 +485,8 @@ fluens.processor.FluensInjector = function(model) {
         }
         if (htmlMatch || jsMatch) {
             grunt.file.write(item.qPath, newContent);
-            grunt.log.writeln("Fluens: file " + item.path +
-                " injected. Scope type: "+ facade.scope.type +".");
+            grunt.verbose.writeln("Fluens: file " + item.path +
+                " injected within '"+ facade.scope.type +"' scope.");
         }
         return newContent;
     };
@@ -475,11 +494,7 @@ fluens.processor.FluensInjector = function(model) {
     this.action = function(facade) {
         _.forIn(facade.cache.getPhase(facade.scope.type, facade.phase.type),
             function(item) {
-                //console.log("Before: ", item.path);
-                //console.log(item.content);
                 item.content = injectItem(facade, item);
-                //console.log("After: ");
-                //console.log(item.content);
             }
         );
         return null;

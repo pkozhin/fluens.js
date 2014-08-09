@@ -13,8 +13,8 @@ fluens.core.FluensScopes = function() {
         }
 
         if (map[scopeType][phaseType]) {
-            throw new Error("Processor for scope '"+scopeType+"' and phase '"+
-                phaseType+"' already exists.");
+            grunt.verbose.writeln("Fluens: Overriding processor for scope '"+
+                scopeType+"' and phase '"+ phaseType +"'.");
         }
 
         map[scopeType][phaseType] = processor;
