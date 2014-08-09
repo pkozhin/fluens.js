@@ -3,21 +3,44 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
     var description = 'Interpolate templates with your data and inject the result to the desired location.',
         self = this;
 
-    // TODO: regexp helper to manage with rex substitutions etc.
+    var defaultOptions = {
+        phase: {
+            parse: {priority: 1},
+            inject: {priority: 2}
+        }
+    };
+
+    var defaultPriority = 5;
 
     this.initContext = function(context, contextType) {
-        var result = [], scope;
-        _.forIn(context, function(item, type) {
-            if (type !== "options") {
-                item.parse.action = item.parse.action || scopes.parser(type);
-                item.inject.action = item.inject.action || scopes.injector(type);
+        var result = [], scope, options = _.pick(context, "options").options || {};
 
-                scope = self.scopeFactory(type, contextType,
-                    self.phaseFactory(fluens.core.FluensPhase.TYPE_PARSE, item.parse),
-                    self.phaseFactory(fluens.core.FluensPhase.TYPE_INJECT, item.inject));
+        options = _.merge(defaultOptions, options);
 
-                validator.validateScope(item, type);
+        _.forIn(context, function(item, scopeType) {
+            var phases = [], priority;
 
+            if (scopeType !== "options") {
+                scope = self.scopeFactory(scopeType, contextType, phases);
+
+                _.forIn(item, function(phase, phaseType) {
+                    var processor = scopes.processor(scopeType, phaseType);
+
+                    phase.action = phase.action ||
+                        (processor ? _.bind(processor.action, processor) : null);
+                    phase.validate = phase.validate ||
+                        (processor ? _.bind(processor.validate, processor) : null);
+
+                    if (!phase.cwd) {
+                        phase.cwd = options.cwd;
+                    }
+                    priority = phase.priority || (options[phaseType] ?
+                        options[phaseType].priority : defaultPriority);
+
+                    phases.push(self.phaseFactory(phaseType, phase, scope, priority));
+                });
+
+                validator.validateScope(scope, scopeType);
                 result.push(scope);
             }
         });
@@ -26,40 +49,45 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
 
     this.cacheContext = function(scopes) {
         _.each(scopes, function(scope){
-            if (scope.isActive()) {
-                cache.cacheScope(scope);
+            cache.cacheScope(scope);
+        });
+    };
+
+    this.processContext = function(scopes) {
+        var phases = [];
+
+        _.each(scopes, function(scope) {
+            phases = phases.concat(scope.phases);
+        });
+
+        phases = _.sortBy(phases, function(phase){
+            return phase.priority;
+        });
+
+        _.each(phases, function(phase) {
+            if (phase.isActive()) {
+                var actionFacade = self.actionFacadeFactory(phase.scope, phase, scopes, cache);
+
+                if (phase.validate(actionFacade)) {
+                    phase.content =  phase.action(actionFacade);
+                } else {
+                    grunt.verbose.writeln("Fluens: phase '"+ phase.type +
+                        "' is not valid within '"+ phase.scope.type +"' scope.");
+                }
             }
         });
     };
 
-    this.parseContext = function(scopes) {
-        _.each(scopes, function(scope){
-            scope.parse.content = scope.parse.action(
-                self.contextFactory(scope, scopes, cache, null));
-        });
+    this.actionFacadeFactory = function(scope, phase, scopes, cache) {
+        return new fluens.core.FluensActionFacade(scope, phase, scopes, cache);
     };
 
-    this.injectContext = function(scopes) {
-        _.each(scopes, function(scope) {
-            _.forIn(cache.getInject(scope.type), function(cacheItem) {
-                if (cacheItem.content) {
-                    cacheItem.content = scope.inject.action(
-                        self.contextFactory(scope, scopes, cache, cacheItem));
-                }
-            });
-        });
+    this.scopeFactory = function(type, contextType, phases) {
+        return new fluens.core.FluensScope(type, contextType, phases);
     };
 
-    this.contextFactory = function(scope, scopes, cache, item) {
-        return new fluens.core.FluensContext(scope, scopes, cache, item);
-    };
-
-    this.scopeFactory = function(type, contextType, parsePhase, injectPhase) {
-        return new fluens.core.FluensScope(type, contextType, parsePhase, injectPhase);
-    };
-
-    this.phaseFactory = function(type, action) {
-        return new fluens.core.FluensPhase(type, action);
+    this.phaseFactory = function(type, params, scope, priority) {
+        return new fluens.core.FluensPhase(type, params, scope, priority);
     };
 
     this.run = function(type, context, options) {
@@ -68,8 +96,21 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
         var items = this.initContext(context, type);
 
         this.cacheContext(items);
-        this.parseContext(items);
-        this.injectContext(items);
+        this.processContext(items);
+    };
+
+    this.addProcessors = function(items) {
+        _.each(_.values(items), function(Type) {
+            var obj = new Type(model);
+            validator.validateProcessor(obj);
+
+            _.forIn(obj.phases, function(phase, phaseType) {
+                _.forIn(phase, function(processor, scopeType) {
+                    validator.validatePhaseProcessor(processor);
+                    scopes.processor(scopeType, phaseType, processor);
+                });
+            });
+        });
     };
 
     grunt.registerMultiTask('fluens', description, function(){

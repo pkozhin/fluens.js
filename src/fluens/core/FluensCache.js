@@ -35,16 +35,17 @@ fluens.core.FluensCache = function(model, commentParser, excludes) {
     };
 
     this.cacheScope = function(scope) {
-        cachePhase(scope, scope.parse);
-        cachePhase(scope, scope.inject);
+        _.each(scope.phases, function(phase){
+            cachePhase(scope, phase);
+        });
     };
 
-    this.getParse = function(type) {
-       return _.values(scopedPhasesMap[type][fluens.core.FluensPhase.TYPE_PARSE]);
+    this.getScope = function(scopeType) {
+        return scopedPhasesMap[scopeType] || null;
     };
 
-    this.getInject = function(type) {
-        return _.values(scopedPhasesMap[type][fluens.core.FluensPhase.TYPE_INJECT]);
+    this.getPhase = function(scopeType, phaseType) {
+        return scopedPhasesMap[scopeType] ? scopedPhasesMap[scopeType][phaseType] : null;
     };
 
     this.getItem = function(qPath) {

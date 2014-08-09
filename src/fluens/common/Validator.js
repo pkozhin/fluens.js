@@ -1,37 +1,46 @@
 fluens.common.Validator = function() {
 
-    var validatePhase = function(scope, scopeType, phase) {
+    var validatePhase = function(scopeType, phase) {
         if (phase.paths && !_.isArray(phase.paths)) {
-            throw new Error("Phase parameter 'paths' should be array. Scope '" +
+            throw new Error("Phase.paths should be array. Scope '" +
                 scopeType + "', phase '"+ phase.type +"'.");
         }
         if (phase.cwd && !_.isString(phase.cwd)) {
-            throw new Error("Phase parameter 'cwd' should be a string. Scope '" +
+            throw new Error("Phase.cwd should be a string. Scope '" +
                 scopeType + "', phase '"+ phase.type +"'.");
         }
-
-        if (scope.type || scope.context) {
-            throw new Error("Scope has reserved properties: " +
-                "type, context, which should not be assigned initially.");
+        if (!_.isFunction(phase.action)) {
+            throw new Error("Phase.action should be a function. Scope '"+
+                scopeType +"', phase '"+ phase.type +"'.");
         }
-        if (phase.content || phase.cachedContent) {
-            throw new Error("Phase has reserved properties: " +
-                "parsedContext, cachedContent which should not be assigned initially.");
+        if (phase.filter !== "isFile" && phase.filter !== "isDirectory") {
+            throw new Error("Phase.filter can be only 'isFile' or 'isDirectory'. Scope '"+
+                scopeType +"', phase '"+ phase.type +"', filter '"+ phase.filter +"'.");
+        }
+    };
+
+    this.validateProcessor = function(processor) {
+        if (!processor.phases) {
+            throw new Error("Processor.phases is not an object.");
+        }
+    };
+
+    this.validatePhaseProcessor = function(processor) {
+        if (!_.isFunction(processor.action)) {
+            throw new Error("Processor.action is not a function.");
+        }
+        if (!_.isFunction(processor.validate)) {
+            throw new Error("Processor.validate is not a function.");
         }
     };
 
     this.validateScope = function(scope, type) {
-        validatePhase(scope, type, scope.parse);
-
-        if (!_.isFunction(scope.parse.action)) {
-            throw new Error("Phase parameter 'action' should be a function. Scope '"+
-                type +"', phase 'parse'.");
+        if (!_.isArray(scope.phases)) {
+            throw new Error("Scope.phases property must be array. Scope: '"+type+"'.");
         }
-        validatePhase(scope, type, scope.inject);
 
-        if (!_.isFunction(scope.inject.action)) {
-            throw new Error("Phase parameter 'action' should be a function. Scope '" +
-                type + "', phase 'inject'.");
-        }
+        _.each(scope.phases, function(phase) {
+            validatePhase(scope.type, phase);
+        });
     };
 };

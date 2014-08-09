@@ -1,26 +1,22 @@
 fluens.core.FluensScopes = function() {
 
-    var parsers = {}, injectors = {}, map;
+    var map = {};
 
-    this.parser = function(key, fn) {
-        if (!_.isFunction(fn)) {
-            return parsers[key] ? parsers[key] : null;
+    this.processor = function(scopeType, phaseType, processor) {
+        if (!processor) {
+            return map[scopeType] && map[scopeType][phaseType] ?
+                map[scopeType][phaseType] : null;
         }
-        if (parsers[key]) {
-            throw new Error("Parser '"+key+"' already exists.");
-        }
-        parsers[key] = fn;
-        map = null;
-    };
 
-    this.injector = function(key, fn) {
-        if (!_.isFunction(fn)) {
-            return injectors[key] ? injectors[key] : null;
+        if (!map[scopeType]) {
+            map[scopeType] = {};
         }
-        if (injectors[key]) {
-            throw new Error("Injector '"+key+"' already exists.");
+
+        if (map[scopeType][phaseType]) {
+            grunt.verbose.writeln("Fluens: Overriding processor for scope '"+
+                scopeType+"' and phase '"+ phaseType +"'.");
         }
-        injectors[key] = fn;
-        map = null;
+
+        map[scopeType][phaseType] = processor;
     };
 };

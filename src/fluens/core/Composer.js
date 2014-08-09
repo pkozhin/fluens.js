@@ -6,23 +6,7 @@ fluens.core.Composer = function(commentParser) {
         validator = new fluens.common.Validator(),
         main = new fluens.core.Fluens(model, cache, scopes, validator);
 
-    _.each(fluens.parser, function(Type) {
-        var obj = new Type(model);
-        _.forIn(obj, function(value, key) {
-            if (_.isFunction(value)) {
-                scopes.parser(key, _.bind(value, obj));
-            }
-        });
-    });
-
-    _.each(fluens.injector, function(Type) {
-        var obj = new Type(model);
-        _.forIn(obj, function(value, key) {
-            if (_.isFunction(value)) {
-                scopes.injector(key, _.bind(value, obj));
-            }
-        });
-    });
+    main.addProcessors(fluens.processor);
 
     this.facade = new fluens.core.FluensFacade(main);
 };
