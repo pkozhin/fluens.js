@@ -113,7 +113,8 @@ module.exports = function (grunt) {
                         paths: ['deps/**', 'fred/**']
                     },
                     inject: {
-                        paths: ['*.js']
+                        paths: ['*.js'],
+                        action: "default"
                     }
                 }
             }
