@@ -1,11 +1,15 @@
-fluens.core.FluensScope = function(type, contextType, parsePhase, injectPhase) {
+fluens.core.FluensScope = function(type, contextType, phases) {
     this.type = type;
     this.context = contextType;
-    this.parse = parsePhase;
-    this.inject = injectPhase;
+    this.phases = phases;
     this.excludes = null;
 
-    this.isActive = function() {
-        return Boolean(this.parse && this.parse.paths && this.parse.paths.length);
+    this.getPhase = function(type) {
+        for (var i = 0; i < this.phases.length; ++i) {
+            if (this.phases[i].type === type) {
+                return this.phases[i];
+            }
+        }
+        return null;
     };
 };

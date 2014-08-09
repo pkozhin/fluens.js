@@ -6,18 +6,14 @@ fluens.core.Composer = function(commentParser) {
         validator = new fluens.common.Validator(),
         main = new fluens.core.Fluens(model, cache, scopes, validator);
 
-    // TODO: Refactor processors lookup.
-    _.each(_.values(fluens.parser).concat(_.values(fluens.injector)), function(Type) {
+    _.each(_.values(fluens.processor), function(Type) {
         var obj = new Type(model);
+        validator.validateProcessor(obj);
 
-        if (!obj.phases) {
-            throw new Error("Phase processor must have 'phases' property.");
-        }
         _.forIn(obj.phases, function(phase, phaseType) {
-            _.forIn(phase, function(action, scopeType) {
-                if (_.isFunction(action)) {
-                    scopes.action(scopeType, phaseType, _.bind(action, obj));
-                }
+            _.forIn(phase, function(processor, scopeType) {
+                validator.validatePhaseProcessor(processor);
+                scopes.processor(scopeType, phaseType, processor);
             });
         });
     });

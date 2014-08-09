@@ -2,8 +2,8 @@ fluens.core.FluensScopes = function() {
 
     var map = {};
 
-    this.action = function(scopeType, phaseType, action) {
-        if (!_.isFunction(action)) {
+    this.processor = function(scopeType, phaseType, processor) {
+        if (!processor) {
             return map[scopeType] && map[scopeType][phaseType] ?
                 map[scopeType][phaseType] : null;
         }
@@ -13,9 +13,10 @@ fluens.core.FluensScopes = function() {
         }
 
         if (map[scopeType][phaseType]) {
-            throw new Error("Action for scope '"+scopeType+"' and phase '"+
+            throw new Error("Processor for scope '"+scopeType+"' and phase '"+
                 phaseType+"' already exists.");
         }
-        map[scopeType][phaseType] = action;
+
+        map[scopeType][phaseType] = processor;
     };
 };
