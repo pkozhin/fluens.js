@@ -1,11 +1,14 @@
 fluens.core.FluensScopes = function() {
 
+    var DEFAULT_SCOPE = "default";
+
     var map = {};
 
     this.processor = function(scopeType, phaseType, processor) {
         if (!processor) {
             return map[scopeType] && map[scopeType][phaseType] ?
-                map[scopeType][phaseType] : null;
+                map[scopeType][phaseType] : (map[DEFAULT_SCOPE][phaseType] ?
+                map[DEFAULT_SCOPE][phaseType] : null);
         }
 
         if (!map[scopeType]) {
@@ -18,5 +21,6 @@ fluens.core.FluensScopes = function() {
         }
 
         map[scopeType][phaseType] = processor;
+        return undefined;
     };
 };
