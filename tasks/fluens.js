@@ -1,5 +1,5 @@
 /**
-* FluensJS - v0.0.6
+* FluensJS - v0.0.8
 * Copyright (c) 2014 Pavel Kozhin
 * License: MIT, https://github.com/pkozhin/fluens.js/blob/master/LICENSE
 */
@@ -361,18 +361,19 @@ fluens.core.FluensScopes = function() {
 
 fluens.processor.AngularParser = function(model) {
 
-    var classDefinitionRegEx = /^(.[^\*]+?) *=.*function.+\{/m,
+    var classDefinitionRegEx = /^(.[^\*]+?) *=.+/m,
         angularTypes = {Controller: true, Service: true, Factory: true, Value: true,
             Provider: true, Constant: true, Directive: true, Filter: true};
 
-    this.dependencies = function(item) {
+    this.dependencies = function(phase, item) {
         var result, moduleName, dependencyType, dependencyName,
-            path = item.path.slice(0, -3).replace(/\//g, "."),
+            cwd = model.stripslashes(phase.cwd + "/"),
+            path = item.qPath.replace(cwd, "").slice(0, -3).replace(/\//g, "."),
             classDefinition = item.content.match(classDefinitionRegEx);
 
         if (classDefinition && path.indexOf(classDefinition[1]) === -1) {
-            throw new Error("Dependency package should match folder structure: " +
-                path + ' vs. ' + classDefinition[1]);
+            throw new Error("Dependency package should match folder structure. Should be:" +
+                path + ' but given: ' + classDefinition[1]);
         }
 
         if (item.metadata && _.isArray(item.metadata[0].tags)) {
@@ -406,7 +407,7 @@ fluens.processor.AngularParser = function(model) {
 
         return _.compact(_.map(facade.cache.getPhase(facade.scope.type, facade.phase.type),
             function(item) {
-                return self[facade.scope.type](item);
+                return self[facade.scope.type](facade.phase, item);
             }
         )).join('\n');
     };
@@ -421,7 +422,6 @@ fluens.processor.AngularParser = function(model) {
         }
     };
 };
-
 fluens.processor.EtherInjector = function(model) {
 
     this.commands = function(context) {
