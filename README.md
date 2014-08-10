@@ -123,7 +123,7 @@ sources: {
     }
 }
 ```
-During parse phase it will extract needed content from files found by paths "fred/*.js", "*.js" and wrap it with script tags. During inject phase it will find files found by paths "*.html" and look at corresponding replacement marker, if lucky it will inject previously parsed content e.g.:
+During parse phase it will extract file paths from files found by paths "fred/*.js", "*.js" and wrap it with script tags. During inject phase it will find files found by paths "*.html" and look at corresponding replacement marker, if lucky it will inject previously parsed content e.g.:
 ```html
 <!--<fluens:sources>-->
 <script src="fred/Bar.js"></script>
@@ -131,6 +131,27 @@ During parse phase it will extract needed content from files found by paths "fre
 <script src="result.js"></script>
 <!--</fluens:sources>-->
 ```
+
+### Scope "*vendors*"
+Used to inject necessary script tags in html files. The only specific of the scope is that Fluens does not try to read the sources within its paths. This is done because vendor sources are not needed for any further complex parsing logic. Configuration can look like:
+```js
+vendors: {
+    parse: {
+        cwd: "./test/src/example/vendor",
+        paths: ["*.js"]
+    },
+    inject: {
+        paths: ["*.html"]
+    }
+}
+```
+During parse phase it will extract file paths from files found by paths "*.js" and wrap it with script tags. During inject phase it will find files found by paths "*.html" and look at corresponding replacement marker, if lucky it will inject previously parsed content e.g.:
+```html
+ <!--<fluens:vendors>-->
+<script src="somelib.js"></script>
+<!--</fluens:vendors>-->
+```
+You can add vendors marker before sources marker in your .html file to allow 3rd libraries to be loaded first.
 
 ### Scope "*namespaces*"
 Used to inject declarations of javascript "namespaces". Notice that filter "isDirectory" is used (by default filter is "isFile"). Configuration can look like:
@@ -231,6 +252,9 @@ Currently there are two types of markers for .html and .js files with multi line
 ## Processors
 To use additional scopes or/and phases you can create your own processor class. For example processor for "foo" scope could look like:
 ```js
+/**
+ * @param {fluens.common.Model} model
+ */
 var FooProcessor = function(model) {
     /**
      * @param {fluens.core.FluensCacheItem} item
@@ -281,6 +305,9 @@ var fluens = require("fluens");
 // Can pass hash or array here.
 fluens.addProcessors([FooProcessor]);
 ```
+
+## Debugging
+Adding "--verbose" with task launching allows you to observe some specific console logs from Fluens plugin.
 
 ## Contributing
 In lieu of a formal styleguide, take care to maintain the existing coding style. Add unit tests for any new or changed functionality. Lint and test your code using [Grunt](http://gruntjs.com/).
