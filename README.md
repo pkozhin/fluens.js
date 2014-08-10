@@ -145,7 +145,7 @@ namespaces: {
     }
 }
 ```
-During parse phase it will extract needed content from files found by paths "deps/**", "fred/**" and convert file paths to javascript ns. During inject phase it will look at corresponding replacement marker, if lucky it will inject previously parsed content e.g.:
+During parse phase it will get files paths data for files found by paths "deps/**", "fred/**" and convert file paths to javascript namespaces(packages) declarations. During inject phase it will look at corresponding replacement marker, if lucky it will inject previously parsed content e.g.:
 ```js
 /*<fluens:namespaces>*/
 window.deps = {};
@@ -279,7 +279,7 @@ After that we need to add this processor to Fluens:
 ```js
 var fluens = require("fluens");
 // Can pass hash or array here.
-fluens.addProcessors([FooParser]);
+fluens.addProcessors([FooProcessor]);
 ```
 
 ## Contributing
