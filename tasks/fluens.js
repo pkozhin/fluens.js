@@ -1,5 +1,5 @@
 /**
-* FluensJS - v0.0.5-0.2
+* FluensJS - v0.0.6
 * Copyright (c) 2014 Pavel Kozhin
 * License: MIT, https://github.com/pkozhin/fluens.js/blob/master/LICENSE
 */
@@ -361,7 +361,7 @@ fluens.core.FluensScopes = function() {
 
 fluens.processor.AngularParser = function(model) {
 
-    var classDefinitionRegEx = /^(.[^\*]+?)function.+\{/m,
+    var classDefinitionRegEx = /^(.[^\*]+?) *=.*function.+\{/m,
         angularTypes = {Controller: true, Service: true, Factory: true, Value: true,
             Provider: true, Constant: true, Directive: true, Filter: true};
 
@@ -370,9 +370,9 @@ fluens.processor.AngularParser = function(model) {
             path = item.path.slice(0, -3).replace(/\//g, "."),
             classDefinition = item.content.match(classDefinitionRegEx);
 
-        if (classDefinition && classDefinition[1].indexOf(path) === -1) {
+        if (classDefinition && path.indexOf(classDefinition[1]) === -1) {
             throw new Error("Dependency package should match folder structure: " +
-                item.path + ' vs. ' + classDefinition[1]);
+                path + ' vs. ' + classDefinition[1]);
         }
 
         if (item.metadata && _.isArray(item.metadata[0].tags)) {

@@ -92,7 +92,8 @@ module.exports = function (grunt) {
                 },
                 dependencies: {
                     parse: {
-                        paths: ["deps/*.js"]
+                        cwd: "./test/src/example/src/deps",
+                        paths: ["hello/*.js"]
                     },
                     inject: {
                         paths: ["*.js"]

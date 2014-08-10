@@ -3,6 +3,6 @@
  * @dependency {Controller}
  * @type {*[]}
  */
-deps.MyController = [function(){
+hello.MyController = [function(){
 
 }];
