@@ -1,14 +1,29 @@
 fluens.processor.AngularParser = function(model) {
 
-    var classDefinitionRegEx = /^(.[^\*]+?) *=.+/m,
+    var classDefinitionRegEx = /^(.[^\*]+?) *=.+/m, stubRules = {}, stubs = {},
         angularTypes = {Controller: true, Service: true, Factory: true, Value: true,
             Provider: true, Constant: true, Directive: true, Filter: true};
+
+    var processPath = function(path) {
+        if (stubRules[path]) {
+            path = stubRules[path];
+        }
+        return path;
+    };
+
+    var isStub = function(path) {
+        return stubs[path];
+    };
 
     this.dependencies = function(phase, item) {
         var result, moduleName, dependencyType, dependencyName,
             cwd = model.stripslashes(phase.cwd + "/"),
             path = item.qPath.replace(cwd, "").slice(0, -3).replace(/\//g, "."),
             classDefinition = item.content.match(classDefinitionRegEx);
+
+        if (isStub(path)) {
+            return null;
+        }
 
         if (classDefinition && path.indexOf(classDefinition[1]) === -1) {
             throw new Error("Dependency package should match folder structure. Should be:" +
@@ -34,11 +49,20 @@ fluens.processor.AngularParser = function(model) {
                 }
                 dependencyType = dependencyType.toLowerCase();
                 dependencyName = dependencyType === "controller" ? path.match(/.+\.(.+)$/)[1] : path;
-                result = moduleName + '.'+ dependencyType +'("'+ dependencyName +'", '+ path +');';
+                result = moduleName + '.'+ dependencyType +'("'+ dependencyName +'", '+ processPath(path) +');';
             }
         }
-
         return result;
+    };
+
+    var processStubs = function(facade) {
+        _.forIn(facade.phase.params.rules, function(value, key) {
+            var stub = model.stripslashes(value).replace(/\//g, ".");
+
+            stubRules[model.stripslashes(key).replace(/\//g, ".")] = stub;
+            stubs[stub] = true;
+        });
+        return null;
     };
 
     this.action = function(facade) {
@@ -58,6 +82,14 @@ fluens.processor.AngularParser = function(model) {
     this.phases = {
         parse: {
             dependencies: this
+        },
+        stub: {
+            dependencies: {
+                action: processStubs,
+                validate: function() {
+                    return true;
+                }
+            }
         }
     };
 };

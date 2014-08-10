@@ -8,6 +8,7 @@ fluens.core.FluensPhase = function(type, params, scope, priority) {
     this.paths = params.paths;
     this.priority = priority;
     this.content = undefined;
+    this.params = params;
 
     this.isActive = function() {
         return this.paths.length;

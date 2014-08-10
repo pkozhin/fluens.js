@@ -77,8 +77,7 @@ module.exports = function (grunt) {
                 options: {
                     cwd: "./test/src/example/src",
                     phase: {
-                        parse: {priority: 1},
-                        inject: {priority: 2}
+
                     }
                 },
                 sources: {
@@ -91,9 +90,16 @@ module.exports = function (grunt) {
                     }
                 },
                 dependencies: {
+                    stub: {
+                        cwd: "./test/src/example/src/deps",
+                        paths: ["**/stub/*.js"],
+                        rules: {
+                            "hello/MyController": "hello/stub/MyController"
+                        }
+                    },
                     parse: {
                         cwd: "./test/src/example/src/deps",
-                        paths: ["hello/*.js"]
+                        paths: ["hello/*.js", "hello/**/*.js"]
                     },
                     inject: {
                         paths: ["*.js"]

@@ -8,8 +8,9 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
 
     var defaultOptions = {
         phase: {
-            parse: {priority: 1},
-            inject: {priority: 2}
+            stub: {priority: 1},
+            parse: {priority: 3},
+            inject: {priority: 5}
         }
     };
 
@@ -38,8 +39,8 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
                     if (!phase.cwd) {
                         phase.cwd = options.cwd;
                     }
-                    priority = phase.priority || (options[phaseType] ?
-                        options[phaseType].priority : defaultPriority);
+                    priority = phase.priority || (options.phase[phaseType] ?
+                        options.phase[phaseType].priority : defaultPriority);
 
                     phases.push(self.phaseFactory(phaseType, phase, scope, priority));
                 });
