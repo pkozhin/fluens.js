@@ -114,7 +114,17 @@ module.exports = function (grunt) {
                     },
                     inject: {
                         paths: ["*.js"],
+                        /* Notifies injector to inject it with default logic (just for example here) */
                         action: "default"
+                    }
+                },
+                vendors: {
+                    parse: {
+                        cwd: "./test/src/example/vendor",
+                        paths: ["*.js"]
+                    },
+                    inject: {
+                        paths: ["*.html"]
                     }
                 }
             }
