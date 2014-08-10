@@ -53,37 +53,37 @@ grunt.initConfig({
           },
           sources: {
               parse: {
-                  paths: ['fred/*.js', '*.js']
+                  paths: ["fred/*.js", "*.js"]
               },
               inject: {
                   cwd: "./test/src/example/src",
-                  paths: ['*.html']
+                  paths: ["*.html"]
               }
           },
           dependencies: {
               parse: {
-                  paths: ['deps/*.js']
+                  paths: ["deps/*.js"]
               },
               inject: {
-                  paths: ['*.js']
+                  paths: ["*.js"]
               }
           },
           styles: {
               parse: {
                   cwd: "./test/src/example/src",
-                  paths: ['styles/*.css']
+                  paths: ["styles/*.css"]
               },
               inject: {
-                  paths: ['*.html']
+                  paths: ["*.html"]
               }
           },
           namespaces: {
               parse: {
                   filter: "isDirectory",
-                  paths: ['deps/**', 'fred/**']
+                  paths: ["deps/**", "fred/**"]
               },
               inject: {
-                  paths: ['*.js']
+                  paths: ["*.js"]
               }
           }
       }
@@ -92,9 +92,9 @@ grunt.initConfig({
 
 ## Scopes
 In the given example above we have multiple scopes: "sources", "dependencies", "styles", "namespaces".
-Each of these scope is bound to a replacement marker where parsed content should be injected.
+Each of these scopes is bound to a replacement marker where parsed content should be injected.
 
-For example in html file there can be "sources" scope marker:
+For example in html file we can have "sources" scope marker:
 ```html
 <!--<fluens:sources>-->
 <!--</fluens:sources>-->
@@ -108,10 +108,106 @@ After task execution it can be replaced with:
 <script src="result.js"></script>
 <!--</fluens:sources>-->
 ```
-Each scope has its own logic on how to prepare injected content and the way it should be injected. Any defined scope should be supported by registered processor. All the given scopes in example configuration above have related processors. So if you define some new "foo" scope then you have to write your own processor to manage this custom scope.
+Each scope has its own logic on how to prepare injected content and the way it should be injected. Any defined scope should be supported by a processor. All the given scopes in example configuration above have predefined processors. So if you want to define some new "foo" scope then you have to write your own processor to manage your custom scope.
+
+### Scope "*sources*"
+Used to inject necessary script tags in html files. Configuration can look like:
+```js
+sources: {
+    parse: {
+        paths: ["fred/*.js", "*.js"]
+    },
+    inject: {
+        cwd: "./test/src/example/src",
+        paths: ["*.html"]
+    }
+}
+```
+During parse phase it will extract needed content from files found by paths "fred/*.js", "*.js" and wrap it with script tags. During inject phase it will find files found by paths "*.html" and look at corresponding replacement marker, if lucky it will inject previously parsed content e.g.:
+```html
+<!--<fluens:sources>-->
+<script src="fred/Bar.js"></script>
+<script src="fred/Foo.js"></script>
+<script src="result.js"></script>
+<!--</fluens:sources>-->
+```
+
+### Scope "*namespaces*"
+Used to inject declarations of javascript "namespaces". Notice that filter "isDirectory" is used (by default filter is "isFile"). Configuration can look like:
+```js
+namespaces: {
+    parse: {
+        filter: "isDirectory",
+        paths: ["deps/**", "fred/**"]
+    },
+    inject: {
+        paths: ["*.js"]
+    }
+}
+```
+During parse phase it will extract needed content from files found by paths "deps/**", "fred/**" and convert file paths to javascript ns. During inject phase it will look at corresponding replacement marker, if lucky it will inject previously parsed content e.g.:
+```js
+/*<fluens:namespaces>*/
+window.deps = {};
+window.fred = {};
+/*</fluens:namespaces>*/
+```
+
+### Scope "*styles*"
+Used to inject link tag with necessary css styles. Configuration can look like:
+```js
+styles: {
+    parse: {
+        cwd: "./test/src/example/src",
+        paths: ["styles/*.css"]
+    },
+    inject: {
+        paths: ["*.html"]
+    }
+}
+```
+During parse phase it will extract needed content from files found by paths "styles/*.css" and convert file paths to link tags. During inject phase it will look at corresponding replacement marker, if lucky it will inject previously parsed content e.g.:
+```html
+<!--<fluens:styles>-->
+<link href="styles/foo.css" rel="stylesheet">
+<!--</fluens:styles>-->
+```
+
+### Scope "*dependencies*"
+Used to inject AngularJS dependencies. Configuration can look like:
+```js
+dependencies: {
+    parse: {
+        paths: ["deps/*.js"]
+    },
+    inject: {
+        paths: ["*.js"]
+    }
+}
+```
+During parse phase it will extract needed content from files found by paths "deps/*.js" and convert file content to AngularJS dependency declarations. During inject phase it will look at corresponding replacement marker, if lucky it will inject previously parsed content e.g.:
+```js
+/*<fluens:dependencies>*/
+main.controller("MyController", deps.MyController);
+/*</fluens:dependencies>*/
+```
+Procesor for this scope relies on JSDoc notations left in .js file to generate proper dependencies declarations. For example class deps.MyController can look like:
+```js
+/**
+ * @module main
+ * @dependency {Controller}
+ * @type {*[]}
+ */
+deps.MyController = [function(){
+
+}];
+```
+You can notice custom notations like @module, @dependency.
+* @module - Means name of AngularJS module which will be used for dependency related method execution declaration.
+* @dependency - Is as type of AngularJS dependency. Currently supported all basic types. 
 
 ## Phases
-Fluens plugin has a set of predefined processors which manage scopes and phases. Each phase has it's own processor related to scope. Currently fluens supports two types of phases: "parse" and "inject". Phase "parse" processed before phase "inject" due to declared priority. Actually you can avoid defining priority for these phases in config options because same done internally in default options.
+Fluens plugin has a set of predefined processors which manage scopes and phases. Each phase has it's own processor related to scope. Currently Fluens supports "parse" and "inject" out of the box. Phase "parse" processed before phase "inject" due to declared priority. Actually you can avoid defining priority for these phases in config options because same done internally in default options.
 
 To use some new phase e.g. "foo" you should create a processor supporting such phase.
 
@@ -122,20 +218,20 @@ During this phase Fluens collects all necessary information by parsing files wit
 During this phase Fluens uses prepared content which was processed during "parse" phase and injects it into replacement markers (if found in files provided within paths). Please look at details in sources.
 
 ## Replacement markers
-Currently there are two type of markers for .html and .js files. For example:
+Currently there are two types of markers for .html and .js files with multi line comments. For example:
 ```html
-<!--<fluens:sources>-->
-<!--</fluens:sources>-->
+<!--<fluens:[SCOPE_TYPE]>-->
+<!--</fluens:[SCOPE_TYPE]>-->
 ```
 ```js
-/*<fluens:namespaces>*/
-/*</fluens:namespaces>*/
+/*<fluens:[SCOPE_TYPE]>*/
+/*</fluens:[SCOPE_TYPE]>*/
 ```
 
 ## Processors
-To use more scopes or/and phases you can create your own processor class. For example processor for "foo" scope could look like:
+To use additional scopes or/and phases you can create your own processor class. For example processor for "foo" scope could look like:
 ```js
-var FooParser = function(model) {
+var FooProcessor = function(model) {
     /**
      * @param {fluens.core.FluensCacheItem} item
      * @returns {string}
@@ -166,7 +262,7 @@ var FooParser = function(model) {
         // in context of the given facade (scope and phase).
         return true;
     };
-    // Here for phase "phase" we declare scope "foo" which points to
+    // Here for phase "parse" we declare scope "foo" which points to
     // an object which has validate() and action() methods.
     this.phases = {
         parse: {

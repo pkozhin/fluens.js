@@ -10,7 +10,7 @@
 
 module.exports = function (grunt) {
     // load all npm grunt tasks
-    require('load-grunt-tasks')(grunt);
+    require("load-grunt-tasks")(grunt);
 
     // Project configuration.
     grunt.initConfig({
@@ -37,7 +37,7 @@ module.exports = function (grunt) {
         },
 
         clean: {
-            tests: ['tmp'],
+            tests: ["tmp"],
             fluens: ["<%= config.releaseDir %>/*.js"]
         },
 
@@ -57,17 +57,17 @@ module.exports = function (grunt) {
         bumpup: {
             options: {
                 updateProps: {
-                    pkg: 'package.json'
+                    pkg: "package.json"
                 }
             },
-            file: 'package.json'
+            file: "package.json"
         },
 
         jshint: {
             fluens: ["<%= config.file %>"],
             options: {
-                jshintrc: '.jshintrc',
-                reporter: require('jshint-stylish')
+                jshintrc: ".jshintrc",
+                reporter: require("jshint-stylish")
             }
         },
 
@@ -83,37 +83,37 @@ module.exports = function (grunt) {
                 },
                 sources: {
                     parse: {
-                        paths: ['fred/*.js', '*.js']
+                        paths: ["fred/*.js", "*.js"]
                     },
                     inject: {
                         cwd: "./test/src/example/src",
-                        paths: ['*.html']
+                        paths: ["*.html"]
                     }
                 },
                 dependencies: {
                     parse: {
-                        paths: ['deps/*.js']
+                        paths: ["deps/*.js"]
                     },
                     inject: {
-                        paths: ['*.js']
+                        paths: ["*.js"]
                     }
                 },
                 styles: {
                     parse: {
                         cwd: "./test/src/example/src",
-                        paths: ['styles/*.css']
+                        paths: ["styles/*.css"]
                     },
                     inject: {
-                        paths: ['*.html']
+                        paths: ["*.html"]
                     }
                 },
                 namespaces: {
                     parse: {
                         filter: "isDirectory",
-                        paths: ['deps/**', 'fred/**']
+                        paths: ["deps/**", "fred/**"]
                     },
                     inject: {
-                        paths: ['*.js'],
+                        paths: ["*.js"],
                         action: "default"
                     }
                 }
@@ -122,25 +122,25 @@ module.exports = function (grunt) {
 
         // Unit tests.
         nodeunit: {
-            tests: ['test/*.test.js']
+            tests: ["test/*.test.js"]
         }
 
     });
 
     // Actually load this plugin's task(s).
-    grunt.loadTasks('tasks');
+    grunt.loadTasks("tasks");
 
-    require('time-grunt')(grunt);
+    require("time-grunt")(grunt);
 
     grunt.registerTask("release-bump", function(type) {
         grunt.task.run("bumpup:" + (type ? type : "patch"));
         grunt.task.run("release");
     });
 
-    grunt.registerTask('test', ['fluens', 'nodeunit']);
+    grunt.registerTask("test", ["fluens", "nodeunit"]);
 
     // By default, lint and run all tests.
-    grunt.registerTask('default', ["clean", "concat", "jshint", "release-bump", "test"]);
+    grunt.registerTask("default", ["clean", "concat", "jshint", "release-bump", "test"]);
     grunt.registerTask("release", ["clean", "concat", "jshint"]);
 
 };
