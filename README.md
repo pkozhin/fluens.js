@@ -47,8 +47,7 @@ grunt.initConfig({
           options: {
               cwd: "./test/src/example/src",
               phase: {
-                  parse: {priority: 1},
-                  inject: {priority: 2}
+                  
               }
           },
           sources: {
@@ -61,6 +60,13 @@ grunt.initConfig({
               }
           },
           dependencies: {
+              stub: {
+                  cwd: "./test/src/example/src/deps",
+                  paths: ["**/stub/*.js"],
+                  rules: {
+                      "hello.MyController": "hello.stub.MyController"
+                  }
+              },
               parse: {
                   paths: ["deps/*.js"]
               },
@@ -85,13 +91,22 @@ grunt.initConfig({
               inject: {
                   paths: ["*.js"]
               }
+          },
+          vendors: {
+              parse: {
+                  cwd: "./test/src/example/vendor",
+                  paths: ["*.js"]
+              },
+              inject: {
+                  paths: ["*.html"]
+              }
           }
       }
 })
 ```
 
 ## Scopes
-In the given example above we have multiple scopes: "sources", "dependencies", "styles", "namespaces".
+In the given example above we have multiple scopes: "sources", "dependencies", "styles", "namespaces", "vendors".
 Each of these scopes is bound to a replacement marker where parsed content should be injected.
 
 For example in html file we can have "sources" scope marker:
@@ -228,14 +243,27 @@ You can notice custom notations like @module, @dependency.
 * @dependency - Is as type of AngularJS dependency. Currently supported all basic types. 
 
 ## Phases
-Fluens plugin has a set of predefined processors which manage scopes and phases. Each phase has it's own processor related to scope. Currently Fluens supports "parse" and "inject" out of the box. Phase "parse" processed before phase "inject" due to declared priority. Actually you can avoid defining priority for these phases in config options because same done internally in default options.
+Fluens plugin has a set of predefined processors which manage scopes and phases. Each phase has it's own processor related to scope. Currently Fluens supports "parse" and "inject" out of the box. Phase "parse" processed before phase "inject" due to declared priority. Current default priorities: stub=1, parse=3, inject=5.
 
 To use some new phase e.g. "foo" you should create a processor supporting such phase.
 
-### Parse phase
+### Phase "*stub*"
+During this phase Fluens brings together information regarding stub usage for proper parsing on the next phase. This phase allows to declare rules for stubbing e.g.:
+```js
+stub: {
+    cwd: "./test/src/example/src/deps",
+    paths: ["**/stub/*.js"],
+    rules: {
+        "hello.MyController": "hello.stub.MyController"
+    }
+}
+```
+Rule above means that for dependency "MyController" will be used reference to "hello.stub.MyController" instead of "hello.MyController".           
+
+### Phase "*parse*"
 During this phase Fluens collects all necessary information by parsing files within provided paths. You can look at source code to get more understanding how it works.
 
-### Inject phase
+### Phase "*inject*"
 During this phase Fluens uses prepared content which was processed during "parse" phase and injects it into replacement markers (if found in files provided within paths). Please look at details in sources.
 
 ## Replacement markers
