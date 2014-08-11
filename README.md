@@ -38,7 +38,7 @@ grunt.initConfig({
 
 ### Usage Examples
 
-You can check Gruntfile.js and task `fluens` for the working examples.
+You can check Gruntfile.js and task `fluens` in source code and tests for better understanding and working examples by visiting Fluens [repository](https://github.com/pkozhin/fluens.js) on GitHub.
 
 ```js
 grunt.initConfig({
@@ -185,6 +185,8 @@ During parse phase it will get files paths data for files found by paths "deps/*
 ```js
 /*<fluens:namespaces>*/
 window.deps = {};
+window.deps.hello = {};
+window.deps.hello.stub = {};
 window.fred = {};
 /*</fluens:namespaces>*/
 ```
@@ -277,8 +279,39 @@ Currently there are two types of markers for .html and .js files with multi line
 /*</fluens:[SCOPE_TYPE]>*/
 ```
 
+## Custom scope
+New scope can be added directly into configuration. For example declaration of scope "foo" could look like:
+ ```js
+foo: {
+    parse: {
+        cwd: "./somepathascwd",
+        paths: ["*.js"],
+        validate: function(facade) {
+            // If false is returned this phase for this scope will be ignored.
+            return true;
+        },
+        action: function(facade) {
+            return "some_prepared_content_for_later_injection";
+        }
+    },
+    inject: {
+        paths: ["*.js"],
+        validate: function(facade) {
+            return true;
+        },
+        action: "default"
+    }
+}
+```
+After that you can place a proper replacement market anywhere to inject and after injection is done it could look like: 
+```js
+/*<fluens:foo>*/
+some_prepared_content_for_later_injection
+/*</fluens:foo>*/
+```
+
 ## Processors
-To use additional scopes or/and phases you can create your own processor class. For example processor for "foo" scope could look like:
+To add additional scopes or/and phases you can also create your own processor class (for better encapsulation). For example processor for "foo" scope could look like:
 ```js
 /**
  * @param {fluens.common.Model} model
