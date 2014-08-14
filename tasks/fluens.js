@@ -1,5 +1,5 @@
 /**
-* FluensJS - v0.0.9-0.5
+* FluensJS - v0.0.9-0.6
 * Copyright (c) 2014 Pavel Kozhin
 * License: MIT, https://github.com/pkozhin/fluens.js/blob/master/LICENSE
 */
