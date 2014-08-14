@@ -1,7 +1,6 @@
 # fluens
 
 > Interpolate templates with your data and inject the result to the desired location.
-> This plugin is not in a stable version yet and can be changed without backward compatibility in the nearest future!
 
 ## Getting Started
 This plugin requires Grunt.
@@ -104,6 +103,33 @@ grunt.initConfig({
       }
 })
 ```
+
+## Options
+
+#### cwd
+Type: `String`  
+Default: ``
+
+This is current working directory which affects paths of all declared scopes. If some phase needs to use different cwd then it can be overridden on phase level.
+ 
+#### phase
+Type: `Object`  
+Default: `Object`
+
+Used for general configuration of all phases.
+
+##### phase_name
+Type: `Object`  
+Default: `undefined`
+
+###### priority
+Type: `Number`  
+Default: `undefined`
+
+When some new phase integrated priority for it could be declared directly on phase or via options. For predefined phases priority has values:
+- stub: 1 
+- parse: 3 
+- inject: 5
 
 ## Scopes
 In the given example above we have multiple scopes: "sources", "dependencies", "styles", "namespaces", "vendors".
@@ -245,7 +271,7 @@ You can notice custom notations like @module, @dependency.
 * @dependency - Is as type of AngularJS dependency. Currently supported all basic types. 
 
 ## Phases
-Fluens plugin has a set of predefined processors which manage scopes and phases. Each phase has it's own processor related to scope. Currently Fluens supports "parse" and "inject" out of the box. Phase "parse" processed before phase "inject" due to declared priority. Current default priorities: stub=1, parse=3, inject=5.
+Fluens plugin has a set of predefined processors which manage scopes and phases. Each phase has its own processor related to scope. Currently Fluens supports "parse" and "inject" out of the box. Phase "parse" processed before phase "inject" due to declared priority. Current default priorities: stub=1, parse=3, inject=5.
 
 To use some new phase e.g. "foo" you should create a processor supporting such phase.
 
