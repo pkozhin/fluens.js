@@ -1,4 +1,8 @@
-# Fluens [![Build Status](https://travis-ci.org/pkozhin/fluens.js.svg?branch=master)](https://travis-ci.org/pkozhin/fluens.js)
+Fluens
+=======
+
+[![Build Status](https://travis-ci.org/pkozhin/fluens.js.svg?branch=master)](https://travis-ci.org/pkozhin/fluens.js)
+[![NPM version](https://badge.fury.io/js/fluens.svg)](http://badge.fury.io/js/fluens)
 
 > Interpolate templates with your data and inject the result to the desired location.
 
