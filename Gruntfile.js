@@ -133,6 +133,14 @@ module.exports = function (grunt) {
                     inject: {
                         paths: ["*.html"]
                     }
+                },
+                commands: {
+                    parse: {
+                        paths: ["command/*.js"]
+                    },
+                    inject: {
+                        paths: ["command/*.js"]
+                    }
                 }
             }
         },
