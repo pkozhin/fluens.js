@@ -26,18 +26,18 @@ fluens.processor.AngularParser = function(model) {
         }
 
         if (classDefinition && path.indexOf(classDefinition[1]) === -1) {
-            throw new Error("Dependency package should match folder structure. Should be:" +
+            throw new Error("Fluens: Dependency package should match folder structure. Should be:" +
                 path + ' but given: ' + classDefinition[1]);
         }
 
         if (item.metadata && _.isArray(item.metadata[0].tags)) {
             _.forEach(item.metadata[0].tags, function(tag) {
                 if (tag.tag === "module") {
-                    if (!tag.name) { throw new Error("Module name is required for '"+ item.path +"'.");}
+                    if (!tag.name) { throw new Error("Fluens: Module name is required for '"+ item.path +"'.");}
                     moduleName = tag.name;
                 }
                 if (tag.tag === "dependency") {
-                    if (!tag.type) { throw new Error("Dependency type is required for '"+ item.path +"'.");}
+                    if (!tag.type) { throw new Error("Fluens: Dependency type is required for '"+ item.path +"'.");}
                     dependencyType = tag.type;
                 }
                 if (moduleName && dependencyType) { return false; }
@@ -45,7 +45,7 @@ fluens.processor.AngularParser = function(model) {
 
             if (moduleName && dependencyType) {
                 if (dependencyType && !angularTypes[dependencyType]) {
-                    throw new Error("Invalid dependency type - '"+dependencyType+"'.");
+                    throw new Error("Fluens: Invalid dependency type - '"+dependencyType+"'.");
                 }
                 dependencyType = dependencyType.toLowerCase();
                 dependencyName = dependencyType === "controller" ? path.match(/.+\.(.+)$/)[1] : path;

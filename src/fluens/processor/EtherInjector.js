@@ -1,23 +1,48 @@
 fluens.processor.EtherInjector = function(model) {
 
-    this.commands = function(context) {
-       /* var re = model.markerExp.replace("T", context.scope.type),
-            rex = new RegExp(re),
-            item = context.item,
-            match = item.content.match(rex);
+    var replace = function(match, replacer, rex, facade, item, content) {
+        var result = replacer.replace(/T/g, facade.scope.type)
+            .replace(" A", match[2].match(/\w+/) ? " " + match[2] : "")
+            .replace("C", content);
 
-        if (match) {
+        result = match[1] + result.split("\n").join("\n" + match[1]);
+        return item.content.replace(rex, result);
+    };
 
-        }*/
+    var injectItem = function(facade, item, parsedContent) {
+        var jsRex = new RegExp(model.jsMarkerExp.source.replace(/T/g, facade.scope.type)),
+            newContent = item.content,
+            jsMatch = newContent.match(jsRex),
+            locator, commands;
+
+        if (jsMatch && (locator = parsedContent.locators[item.qPath]) &&
+            (commands = parsedContent.commands[locator.id])) {
+
+            commands = commands.sort();
+
+            newContent = replace(jsMatch, model.jsMarkerReplacer,
+                jsRex, facade, item, commands.join('\n\n'));
+
+            grunt.file.write(item.qPath, model.normalizelf(newContent));
+            grunt.verbose.writeln("Fluens: file " + item.path +
+                " injected within '"+ facade.scope.type +"' scope.");
+        }
+        return newContent;
     };
 
     this.action = function(facade) {
+        var parsedContent = facade.scope.getPhase("parse").content;
+
+        _.forIn(facade.cache.getPhase(facade.scope.type, facade.phase.type),
+            function(item) {
+                item.content = injectItem(facade, item, parsedContent);
+            }
+        );
         return null;
     };
 
     this.validate = function(facade) {
-        return _.isFunction(this[facade.scope.type]) &&
-            Boolean(facade.scope.getPhase("parse"));
+        return Boolean(facade.scope.getPhase("parse"));
     };
 
     this.phases = {
