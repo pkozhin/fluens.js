@@ -18,6 +18,8 @@ fluens.processor.EtherInjector = function(model) {
         if (jsMatch && (locator = parsedContent.locators[item.qPath]) &&
             (commands = parsedContent.commands[locator.id])) {
 
+            commands = commands.sort();
+
             newContent = replace(jsMatch, model.jsMarkerReplacer,
                 jsRex, facade, item, commands.join('\n\n'));
 

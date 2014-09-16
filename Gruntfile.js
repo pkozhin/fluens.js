@@ -162,7 +162,7 @@ module.exports = function (grunt) {
         grunt.task.run("release");
     });
 
-    grunt.registerTask("test", ["fluens", "nodeunit"]);
+    grunt.registerTask("test", ["jshint", "fluens", "nodeunit"]);
 
     // By default, lint and run all tests.
     grunt.registerTask("default", ["clean", "concat", "jshint", "release-bump", "test"]);
