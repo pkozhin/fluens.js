@@ -20,12 +20,14 @@ fluens.processor.EtherInjector = function(model) {
 
             commands = commands.sort();
 
-            newContent = replace(jsMatch, model.jsMarkerReplacer,
-                jsRex, facade, item, commands.join('\n\n'));
+            newContent = model.normalizelf(replace(jsMatch, model.jsMarkerReplacer,
+                jsRex, facade, item, commands.join('\n\n')));
 
-            grunt.file.write(item.qPath, model.normalizelf(newContent));
-            grunt.verbose.writeln("Fluens: file " + item.path +
-                " injected within '"+ facade.scope.type +"' scope.");
+            if (item.content !== newContent) {
+                grunt.file.write(item.qPath, newContent);
+                grunt.verbose.writeln("Fluens: file " + item.path +
+                    " injected within '" + facade.scope.type + "' scope.");
+            }
         }
         return newContent;
     };
