@@ -1,5 +1,5 @@
 /**
-* FluensJS - v0.0.9-0.7
+* FluensJS - v0.1.0
 * Copyright (c) 2014 Pavel Kozhin
 * License: MIT, https://github.com/pkozhin/fluens.js/blob/master/LICENSE
 */
@@ -37,41 +37,41 @@ fluens.common.Validator = function() {
 
     var validatePhase = function(scopeType, phase) {
         if (phase.paths && !_.isArray(phase.paths)) {
-            throw new Error("Phase.paths should be array. Scope '" +
+            throw new Error("Fluens: Phase.paths should be array. Scope '" +
                 scopeType + "', phase '"+ phase.type +"'.");
         }
         if (phase.cwd && !_.isString(phase.cwd)) {
-            throw new Error("Phase.cwd should be a string. Scope '" +
+            throw new Error("Fluens: Phase.cwd should be a string. Scope '" +
                 scopeType + "', phase '"+ phase.type +"'.");
         }
         if (!_.isFunction(phase.action)) {
-            throw new Error("Phase.action should be a function. Scope '"+
+            throw new Error("Fluens: Phase.action should be a function. Scope '"+
                 scopeType +"', phase '"+ phase.type +"'.");
         }
         if (phase.filter !== "isFile" && phase.filter !== "isDirectory") {
-            throw new Error("Phase.filter can be only 'isFile' or 'isDirectory'. Scope '"+
+            throw new Error("Fluens: Phase.filter can be only 'isFile' or 'isDirectory'. Scope '"+
                 scopeType +"', phase '"+ phase.type +"', filter '"+ phase.filter +"'.");
         }
     };
 
     this.validateProcessor = function(processor) {
         if (!processor.phases) {
-            throw new Error("Processor.phases is not an object.");
+            throw new Error("Fluens: Processor.phases is not an object.");
         }
     };
 
     this.validatePhaseProcessor = function(processor) {
         if (!_.isFunction(processor.action)) {
-            throw new Error("Processor.action is not a function.");
+            throw new Error("Fluens: Processor.action is not a function.");
         }
         if (!_.isFunction(processor.validate)) {
-            throw new Error("Processor.validate is not a function.");
+            throw new Error("Fluens: Processor.validate is not a function.");
         }
     };
 
     this.validateScope = function(scope, type) {
         if (!_.isArray(scope.phases)) {
-            throw new Error("Scope.phases property must be array. Scope: '"+type+"'.");
+            throw new Error("Fluens: Scope.phases property must be array. Scope: '"+type+"'.");
         }
 
         _.each(scope.phases, function(phase) {
@@ -191,7 +191,7 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
     };
 
     this.run = function(type, context, options) {
-        if (!context) { throw new Error("Task '"+ type +"' is not configured."); }
+        if (!context) { throw new Error("Fluens: Task '"+ type +"' is not configured."); }
 
         var items = this.initContext(context, type, options);
 
@@ -389,18 +389,18 @@ fluens.processor.AngularParser = function(model) {
         }
 
         if (classDefinition && path.indexOf(classDefinition[1]) === -1) {
-            throw new Error("Dependency package should match folder structure. Should be:" +
+            throw new Error("Fluens: Dependency package should match folder structure. Should be:" +
                 path + ' but given: ' + classDefinition[1]);
         }
 
         if (item.metadata && _.isArray(item.metadata[0].tags)) {
             _.forEach(item.metadata[0].tags, function(tag) {
                 if (tag.tag === "module") {
-                    if (!tag.name) { throw new Error("Module name is required for '"+ item.path +"'.");}
+                    if (!tag.name) { throw new Error("Fluens: Module name is required for '"+ item.path +"'.");}
                     moduleName = tag.name;
                 }
                 if (tag.tag === "dependency") {
-                    if (!tag.type) { throw new Error("Dependency type is required for '"+ item.path +"'.");}
+                    if (!tag.type) { throw new Error("Fluens: Dependency type is required for '"+ item.path +"'.");}
                     dependencyType = tag.type;
                 }
                 if (moduleName && dependencyType) { return false; }
@@ -408,7 +408,7 @@ fluens.processor.AngularParser = function(model) {
 
             if (moduleName && dependencyType) {
                 if (dependencyType && !angularTypes[dependencyType]) {
-                    throw new Error("Invalid dependency type - '"+dependencyType+"'.");
+                    throw new Error("Fluens: Invalid dependency type - '"+dependencyType+"'.");
                 }
                 dependencyType = dependencyType.toLowerCase();
                 dependencyName = dependencyType === "controller" ? path.match(/.+\.(.+)$/)[1] : path;
@@ -458,24 +458,51 @@ fluens.processor.AngularParser = function(model) {
 };
 fluens.processor.EtherInjector = function(model) {
 
-    this.commands = function(context) {
-       /* var re = model.markerExp.replace("T", context.scope.type),
-            rex = new RegExp(re),
-            item = context.item,
-            match = item.content.match(rex);
+    var replace = function(match, replacer, rex, facade, item, content) {
+        var result = replacer.replace(/T/g, facade.scope.type)
+            .replace(" A", match[2].match(/\w+/) ? " " + match[2] : "")
+            .replace("C", content);
 
-        if (match) {
+        result = match[1] + result.split("\n").join("\n" + match[1]);
+        return item.content.replace(rex, result);
+    };
 
-        }*/
+    var injectItem = function(facade, item, parsedContent) {
+        var jsRex = new RegExp(model.jsMarkerExp.source.replace(/T/g, facade.scope.type)),
+            newContent = item.content,
+            jsMatch = newContent.match(jsRex),
+            locator, commands;
+
+        if (jsMatch && (locator = parsedContent.locators[item.qPath]) &&
+            (commands = parsedContent.commands[locator.id])) {
+
+            commands = commands.sort();
+
+            newContent = model.normalizelf(replace(jsMatch, model.jsMarkerReplacer,
+                jsRex, facade, item, commands.join('\n\n')));
+
+            if (item.content !== newContent) {
+                grunt.file.write(item.qPath, newContent);
+                grunt.verbose.writeln("Fluens: file " + item.path +
+                    " injected within '" + facade.scope.type + "' scope.");
+            }
+        }
+        return newContent;
     };
 
     this.action = function(facade) {
+        var parsedContent = facade.scope.getPhase("parse").content;
+
+        _.forIn(facade.cache.getPhase(facade.scope.type, facade.phase.type),
+            function(item) {
+                item.content = injectItem(facade, item, parsedContent);
+            }
+        );
         return null;
     };
 
     this.validate = function(facade) {
-        return _.isFunction(this[facade.scope.type]) &&
-            Boolean(facade.scope.getPhase("parse"));
+        return Boolean(facade.scope.getPhase("parse"));
     };
 
     this.phases = {
@@ -487,16 +514,120 @@ fluens.processor.EtherInjector = function(model) {
 
 fluens.processor.EtherParser = function(model) {
 
-    this.commands = function(facade) {
-        return null;
+    var data, initRex = /\.initialize = function[ ]?\((.*)\)/,
+        nameRex = /.+\/(.+)\./,
+        packageRex = /(.+\/.+)\./,
+        promiseRex = /\.promise = function\(\)/,
+        execRex = /\.execute = function[ ]?\(\)/;
+
+    var commandLocatorItemTpl = "this.get{NAME} = function({PARAMS}) {\n" +
+        "\treturn {FACTORY}.get({COMMAND}{PARAMS});" +
+        "\n};";
+
+    // TODO: Think about optimization.
+    var getLocator = function(phase, item) {
+        var result = null, isLocator, id;
+
+        if (item.metadata && _.isArray(item.metadata[0].tags)) {
+            _.forEach(item.metadata[0].tags, function (tag) {
+                if (!isLocator && tag.tag === "role") {
+                    if (!tag.type) {
+                        throw new Error("Fluens: Role type is required for '" + item.path + "'.");
+                    }
+                    isLocator = tag.type === "CommandLocator";
+                }
+                if (tag.tag === "id") {
+                    if (!tag.name) {
+                        throw new Error("Fluens: Id is required for '" + item.path + "'.");
+                    }
+                    id = tag.name;
+                }
+            });
+            if (isLocator) {
+                if (!id) {
+                    throw new Error("Fluens: CommandLocator mus have an id.");
+                }
+                result = {id: id, item: item};
+            }
+        }
+        return result;
     };
 
+    var getCommand = function(phase, item) {
+        var result = null, isCommand, ownerId, paramsMatch;
+
+        if (item.metadata && _.isArray(item.metadata[0].tags)) {
+            _.forEach(item.metadata[0].tags, function (tag) {
+                if (!isCommand && tag.tag === "role") {
+                    if (!tag.type) {
+                        throw new Error("Fluens: Role type is required for '" + item.path + "'.");
+                    }
+                    isCommand =  tag.type === "Command" || tag.type === "QCommand" ? tag.type : false;
+                }
+                if (tag.tag === "owner") {
+                    if (!tag.name) {
+                        throw new Error("Fluens: Owner is required for '" + item.path + "'.");
+                    }
+                    ownerId = tag.name;
+                }
+            });
+            if (isCommand) {
+                if (!ownerId) {
+                    throw new Error("Fluens: Command mus have an owner.");
+                }
+                if (isCommand === "QCommand" && !item.content.match(promiseRex)) {
+                    throw new Error("Fluens: QCommand must have 'promise' method declared w/o arguments.");
+                }
+                if (isCommand === "Command" && !item.content.match(execRex)) {
+                    throw new Error("Fluens: Command must have 'execute' method declared w/o arguments.");
+                }
+                paramsMatch = item.content.match(initRex);
+                result = {
+                    ownerId: ownerId,
+                    type: isCommand,
+                    item: item,
+                    name: item.qPath.match(nameRex)[1],
+                    params: paramsMatch ? paramsMatch[1] : ""
+                };
+            }
+        }
+        return result;
+    };
+
+    var processCommandTpl = function(command) {
+        var reference = command.item.path.match(packageRex)[1].replace(/\//g, ".") + (command.params ? ", " : "");
+
+        return commandLocatorItemTpl.replace("{NAME}", command.name).replace(/\{PARAMS\}/g, command.params)
+            .replace("{FACTORY}", (command.type === "QCommand" ? "Ether.plugin.commands.q()" : "Ether.plugin.commands.plain()"))
+            .replace("{COMMAND}", reference);
+    };
+
+    var parse = function(phase, item) {
+        var locator, command;
+
+        if (locator = getLocator(phase, item)) {
+            data.locators[item.qPath] = locator;
+        } else if (command = getCommand(phase, item)) {
+            if (!data.commands[command.ownerId]) {
+                data.commands[command.ownerId] = [];
+            }
+            data.commands[command.ownerId].push(processCommandTpl(command));
+        }
+    };
+
+    // Return an object for further specific injection logic.
     this.action = function(facade) {
-        return null;
+        data = {locators: {}, commands: {}};
+
+        _.each(facade.cache.getPhase(facade.scope.type, facade.phase.type), function(item) {
+            parse(facade.phase, item);
+        });
+
+        return data;
     };
 
     this.validate = function(facade) {
-        return _.isFunction(this[facade.scope.type]);
+        return true;
     };
 
     this.phases = {
@@ -525,14 +656,14 @@ fluens.processor.FluensInjector = function(model) {
             jsMatch = newContent.match(jsRex);
 
         if (htmlMatch) {
-            newContent = replace(htmlMatch, model.htmlMarkerReplacer,
-                htmlRex, facade, item);
+            newContent = model.normalizelf(replace(htmlMatch,
+                model.htmlMarkerReplacer, htmlRex, facade, item));
         } else if (jsMatch) {
-            newContent = replace(jsMatch, model.jsMarkerReplacer,
-                jsRex, facade, item);
+            newContent = model.normalizelf(replace(jsMatch,
+                model.jsMarkerReplacer, jsRex, facade, item));
         }
-        if (htmlMatch || jsMatch) {
-            grunt.file.write(item.qPath, model.normalizelf(newContent));
+        if ((htmlMatch || jsMatch) && item.content !== newContent) {
+            grunt.file.write(item.qPath, newContent);
             grunt.verbose.writeln("Fluens: file " + item.path +
                 " injected within '"+ facade.scope.type +"' scope.");
         }

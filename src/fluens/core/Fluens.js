@@ -96,7 +96,7 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
     };
 
     this.run = function(type, context, options) {
-        if (!context) { throw new Error("Task '"+ type +"' is not configured."); }
+        if (!context) { throw new Error("Fluens: Task '"+ type +"' is not configured."); }
 
         var items = this.initContext(context, type, options);
 

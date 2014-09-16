@@ -44,5 +44,14 @@ exports.fluens = {
 
     test.equal(actual, expected, 'should process result.js correctly');
     test.done();
-  }
+  },
+  CommandLocator_js: function (test) {
+      test.expect(1);
+
+      var actual = grunt.file.read('test/src/example/src/command/CommandLocator.js'),
+          expected = grunt.file.read('test/expected/CommandLocator.js');
+
+      test.equal(actual, expected, 'should process result.js correctly');
+      test.done();
+    }
 };
