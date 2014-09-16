@@ -17,14 +17,14 @@ fluens.processor.FluensInjector = function(model) {
             jsMatch = newContent.match(jsRex);
 
         if (htmlMatch) {
-            newContent = replace(htmlMatch, model.htmlMarkerReplacer,
-                htmlRex, facade, item);
+            newContent = model.normalizelf(replace(htmlMatch,
+                model.htmlMarkerReplacer, htmlRex, facade, item));
         } else if (jsMatch) {
-            newContent = replace(jsMatch, model.jsMarkerReplacer,
-                jsRex, facade, item);
+            newContent = model.normalizelf(replace(jsMatch,
+                model.jsMarkerReplacer, jsRex, facade, item));
         }
-        if (htmlMatch || jsMatch) {
-            grunt.file.write(item.qPath, model.normalizelf(newContent));
+        if ((htmlMatch || jsMatch) && item.content !== newContent) {
+            grunt.file.write(item.qPath, newContent);
             grunt.verbose.writeln("Fluens: file " + item.path +
                 " injected within '"+ facade.scope.type +"' scope.");
         }

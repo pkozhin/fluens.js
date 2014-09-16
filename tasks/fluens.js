@@ -1,5 +1,5 @@
 /**
-* FluensJS - v0.0.9-0.7
+* FluensJS - v0.1.0
 * Copyright (c) 2014 Pavel Kozhin
 * License: MIT, https://github.com/pkozhin/fluens.js/blob/master/LICENSE
 */
@@ -476,12 +476,16 @@ fluens.processor.EtherInjector = function(model) {
         if (jsMatch && (locator = parsedContent.locators[item.qPath]) &&
             (commands = parsedContent.commands[locator.id])) {
 
-            newContent = replace(jsMatch, model.jsMarkerReplacer,
-                jsRex, facade, item, commands.join('\n\n'));
+            commands = commands.sort();
 
-            grunt.file.write(item.qPath, model.normalizelf(newContent));
-            grunt.verbose.writeln("Fluens: file " + item.path +
-                " injected within '"+ facade.scope.type +"' scope.");
+            newContent = model.normalizelf(replace(jsMatch, model.jsMarkerReplacer,
+                jsRex, facade, item, commands.join('\n\n')));
+
+            if (item.content !== newContent) {
+                grunt.file.write(item.qPath, newContent);
+                grunt.verbose.writeln("Fluens: file " + item.path +
+                    " injected within '" + facade.scope.type + "' scope.");
+            }
         }
         return newContent;
     };
@@ -510,10 +514,17 @@ fluens.processor.EtherInjector = function(model) {
 
 fluens.processor.EtherParser = function(model) {
 
-    var data, initRex = /\.initialize = function\((.*)\)/,
+    var data, initRex = /\.initialize = function[ ]?\((.*)\)/,
         nameRex = /.+\/(.+)\./,
-        packageRex = /(.+\/.+)\./;
+        packageRex = /(.+\/.+)\./,
+        promiseRex = /\.promise = function\(\)/,
+        execRex = /\.execute = function[ ]?\(\)/;
 
+    var commandLocatorItemTpl = "this.get{NAME} = function({PARAMS}) {\n" +
+        "\treturn {FACTORY}.get({COMMAND}{PARAMS});" +
+        "\n};";
+
+    // TODO: Think about optimization.
     var getLocator = function(phase, item) {
         var result = null, isLocator, id;
 
@@ -564,6 +575,12 @@ fluens.processor.EtherParser = function(model) {
                 if (!ownerId) {
                     throw new Error("Fluens: Command mus have an owner.");
                 }
+                if (isCommand === "QCommand" && !item.content.match(promiseRex)) {
+                    throw new Error("Fluens: QCommand must have 'promise' method declared w/o arguments.");
+                }
+                if (isCommand === "Command" && !item.content.match(execRex)) {
+                    throw new Error("Fluens: Command must have 'execute' method declared w/o arguments.");
+                }
                 paramsMatch = item.content.match(initRex);
                 result = {
                     ownerId: ownerId,
@@ -577,10 +594,12 @@ fluens.processor.EtherParser = function(model) {
         return result;
     };
 
-    var parseCommand = function(command) {
-        return "this.get" + command.name + " = function(" + command.params +") {\n" +
-        "\t return " + (command.type === "QCommand" ? "Ether.plugin.commands.q()" : "Ether.plugin.commands.plain()") + ".get(" +
-        command.item.path.match(packageRex)[1].replace(/\//g, ".") + (command.params ? ", " + command.params : "") + ");\n};";
+    var processCommandTpl = function(command) {
+        var reference = command.item.path.match(packageRex)[1].replace(/\//g, ".") + (command.params ? ", " : "");
+
+        return commandLocatorItemTpl.replace("{NAME}", command.name).replace(/\{PARAMS\}/g, command.params)
+            .replace("{FACTORY}", (command.type === "QCommand" ? "Ether.plugin.commands.q()" : "Ether.plugin.commands.plain()"))
+            .replace("{COMMAND}", reference);
     };
 
     var parse = function(phase, item) {
@@ -592,13 +611,13 @@ fluens.processor.EtherParser = function(model) {
             if (!data.commands[command.ownerId]) {
                 data.commands[command.ownerId] = [];
             }
-            data.commands[command.ownerId].push(parseCommand(command));
+            data.commands[command.ownerId].push(processCommandTpl(command));
         }
     };
 
     // Return an object for further specific injection logic.
     this.action = function(facade) {
-        data = {locators:{}, commands:{}};
+        data = {locators: {}, commands: {}};
 
         _.each(facade.cache.getPhase(facade.scope.type, facade.phase.type), function(item) {
             parse(facade.phase, item);
@@ -637,14 +656,14 @@ fluens.processor.FluensInjector = function(model) {
             jsMatch = newContent.match(jsRex);
 
         if (htmlMatch) {
-            newContent = replace(htmlMatch, model.htmlMarkerReplacer,
-                htmlRex, facade, item);
+            newContent = model.normalizelf(replace(htmlMatch,
+                model.htmlMarkerReplacer, htmlRex, facade, item));
         } else if (jsMatch) {
-            newContent = replace(jsMatch, model.jsMarkerReplacer,
-                jsRex, facade, item);
+            newContent = model.normalizelf(replace(jsMatch,
+                model.jsMarkerReplacer, jsRex, facade, item));
         }
-        if (htmlMatch || jsMatch) {
-            grunt.file.write(item.qPath, model.normalizelf(newContent));
+        if ((htmlMatch || jsMatch) && item.content !== newContent) {
+            grunt.file.write(item.qPath, newContent);
             grunt.verbose.writeln("Fluens: file " + item.path +
                 " injected within '"+ facade.scope.type +"' scope.");
         }
