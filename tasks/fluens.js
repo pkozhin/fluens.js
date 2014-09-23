@@ -1,5 +1,5 @@
 /**
-* FluensJS - v0.1.0
+* FluensJS - v0.1.2
 * Copyright (c) 2014 Pavel Kozhin
 * License: MIT, https://github.com/pkozhin/fluens.js/blob/master/LICENSE
 */
@@ -122,8 +122,13 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
             if (scopeType !== OPTIONS && scopeType !== DEFAULT_SCOPE) {
                 scope = self.scopeFactory(scopeType, contextType, phases);
 
+                grunt.verbose.writeln("Fluens: initializing context '"+ contextType +
+                    "', scope '"+ scopeType +"'");
+
                 _.forIn(item, function(phase, phaseType) {
                     var processor = scopes.processor(scopeType, phaseType);
+
+                    grunt.verbose.writeln("Fluens: initializing phase '"+ phaseType +"'");
 
                     phase.action = _.isFunction(phase.action) ? phase.action :
                         (processor ? _.bind(processor.action, processor) : null);
@@ -149,6 +154,7 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
 
     this.cacheContext = function(scopes) {
         _.each(scopes, function(scope){
+            grunt.verbose.writeln("Fluens: caching scope '"+ scope.type +"'");
             cache.cacheScope(scope);
         });
     };
@@ -169,6 +175,7 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
                 var actionFacade = self.actionFacadeFactory(phase.scope, phase, scopes, cache);
 
                 if (phase.validate(actionFacade)) {
+                    grunt.verbose.writeln("Fluens: processing scope '"+ phase.scope.type +"', phase '"+ phase.type +"'");
                     phase.content =  phase.action(actionFacade);
                 } else {
                     grunt.verbose.writeln("Fluens: phase '"+ phase.type +
@@ -193,10 +200,17 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
     this.run = function(type, context, options) {
         if (!context) { throw new Error("Fluens: Task '"+ type +"' is not configured."); }
 
-        var items = this.initContext(context, type, options);
+        try {
+            var items = this.initContext(context, type, options);
 
-        this.cacheContext(items);
-        this.processContext(items);
+            this.cacheContext(items);
+            this.processContext(items);
+        } catch (error) {
+            if (error.stack) {
+                console.error(error.stack);
+            }
+            throw error;
+        }
     };
 
     this.addProcessors = function(items) {
@@ -381,7 +395,7 @@ fluens.processor.AngularParser = function(model) {
     this.dependencies = function(phase, item) {
         var result, moduleName, dependencyType, dependencyName,
             cwd = model.stripslashes(phase.cwd + "/"),
-            path = item.qPath.replace(cwd, "").slice(0, -3).replace(/\//g, "."),
+            path = item.qPath.replace(cwd, "").replace(/^\W*/, "").slice(0, -3).replace(/\//g, "."),
             classDefinition = item.content.match(classDefinitionRegEx);
 
         if (isStub(path)) {
@@ -396,11 +410,11 @@ fluens.processor.AngularParser = function(model) {
         if (item.metadata && _.isArray(item.metadata[0].tags)) {
             _.forEach(item.metadata[0].tags, function(tag) {
                 if (tag.tag === "module") {
-                    if (!tag.name) { throw new Error("Fluens: Module name is required for '"+ item.path +"'.");}
+                    if (!tag.name) { throw new Error("Fluens: Module name is required for '"+ item.qPath +"'.");}
                     moduleName = tag.name;
                 }
                 if (tag.tag === "dependency") {
-                    if (!tag.type) { throw new Error("Fluens: Dependency type is required for '"+ item.path +"'.");}
+                    if (!tag.type) { throw new Error("Fluens: Dependency type is required for '"+ item.qPath +"'.");}
                     dependencyType = tag.type;
                 }
                 if (moduleName && dependencyType) { return false; }
@@ -408,7 +422,7 @@ fluens.processor.AngularParser = function(model) {
 
             if (moduleName && dependencyType) {
                 if (dependencyType && !angularTypes[dependencyType]) {
-                    throw new Error("Fluens: Invalid dependency type - '"+dependencyType+"'.");
+                    throw new Error("Fluens: Invalid dependency type '"+ dependencyType +"' in '"+ item.qPath +"'.");
                 }
                 dependencyType = dependencyType.toLowerCase();
                 dependencyName = dependencyType === "controller" ? path.match(/.+\.(.+)$/)[1] : path;
@@ -515,7 +529,7 @@ fluens.processor.EtherInjector = function(model) {
 fluens.processor.EtherParser = function(model) {
 
     var data, initRex = /\.initialize = function[ ]?\((.*)\)/,
-        nameRex = /.+\/(.+)\./,
+        nameRex = /.+\/(.+)\./, stubRules = {}, stubs = {},
         packageRex = /(.+\/.+)\./,
         promiseRex = /\.promise = function\(\)/,
         execRex = /\.execute = function[ ]?\(\)/;
@@ -523,6 +537,27 @@ fluens.processor.EtherParser = function(model) {
     var commandLocatorItemTpl = "this.get{NAME} = function({PARAMS}) {\n" +
         "\treturn {FACTORY}.get({COMMAND}{PARAMS});" +
         "\n};";
+
+    var processPath = function(path) {
+        if (stubRules[path]) {
+            path = stubRules[path];
+        }
+        return path;
+    };
+
+    var isStub = function(path) {
+        return stubs[path];
+    };
+
+    var processStubs = function(facade) {
+        _.forIn(facade.phase.params.rules, function(value, key) {
+            var stub = model.stripslashes(value).replace(/\//g, ".");
+
+            stubRules[model.stripslashes(key).replace(/\//g, ".")] = stub;
+            stubs[stub] = true;
+        });
+        return null;
+    };
 
     // TODO: Think about optimization.
     var getLocator = function(phase, item) {
@@ -532,20 +567,20 @@ fluens.processor.EtherParser = function(model) {
             _.forEach(item.metadata[0].tags, function (tag) {
                 if (!isLocator && tag.tag === "role") {
                     if (!tag.type) {
-                        throw new Error("Fluens: Role type is required for '" + item.path + "'.");
+                        throw new Error("Fluens: Role type is required for '" + item.qPath + "'.");
                     }
                     isLocator = tag.type === "CommandLocator";
                 }
                 if (tag.tag === "id") {
                     if (!tag.name) {
-                        throw new Error("Fluens: Id is required for '" + item.path + "'.");
+                        throw new Error("Fluens: Id is required for '" + item.qPath + "'.");
                     }
                     id = tag.name;
                 }
             });
             if (isLocator) {
                 if (!id) {
-                    throw new Error("Fluens: CommandLocator mus have an id.");
+                    throw new Error("Fluens: CommandLocator '"+ item.qPath +"' must have an id.");
                 }
                 result = {id: id, item: item};
             }
@@ -560,42 +595,48 @@ fluens.processor.EtherParser = function(model) {
             _.forEach(item.metadata[0].tags, function (tag) {
                 if (!isCommand && tag.tag === "role") {
                     if (!tag.type) {
-                        throw new Error("Fluens: Role type is required for '" + item.path + "'.");
+                        throw new Error("Fluens: Role type is required for '" + item.qPath + "'.");
                     }
                     isCommand =  tag.type === "Command" || tag.type === "QCommand" ? tag.type : false;
                 }
                 if (tag.tag === "owner") {
                     if (!tag.name) {
-                        throw new Error("Fluens: Owner is required for '" + item.path + "'.");
+                        throw new Error("Fluens: Owner is required for '" + item.qPath + "'.");
                     }
                     ownerId = tag.name;
                 }
             });
             if (isCommand) {
-                if (!ownerId) {
-                    throw new Error("Fluens: Command mus have an owner.");
+                var path = item.qPath.replace(phase.cwd || "", "").replace(/^\W*/, "").match(packageRex)[1].replace(/\//g, ".");
+
+                if (!isStub(path)) {
+                    if (!ownerId) {
+                        throw new Error("Fluens: Command '"+ item.qPath +"' must have an owner.");
+                    }
+                    if (isCommand === "QCommand" && !item.content.match(promiseRex)) {
+                        throw new Error("Fluens: QCommand '"+ item.qPath +"' must have 'promise' method declared w/o arguments.");
+                    }
+                    if (isCommand === "Command" && !item.content.match(execRex)) {
+                        throw new Error("Fluens: Command '"+ item.qPath +"' must have 'execute' method declared w/o arguments.");
+                    }
+                    paramsMatch = item.content.match(initRex);
+                    result = {
+                        ownerId: ownerId,
+                        type: isCommand,
+                        item: item,
+                        cwd: phase.cwd || "",
+                        path: path,
+                        name: item.qPath.match(nameRex)[1],
+                        params: paramsMatch ? paramsMatch[1] : ""
+                    };
                 }
-                if (isCommand === "QCommand" && !item.content.match(promiseRex)) {
-                    throw new Error("Fluens: QCommand must have 'promise' method declared w/o arguments.");
-                }
-                if (isCommand === "Command" && !item.content.match(execRex)) {
-                    throw new Error("Fluens: Command must have 'execute' method declared w/o arguments.");
-                }
-                paramsMatch = item.content.match(initRex);
-                result = {
-                    ownerId: ownerId,
-                    type: isCommand,
-                    item: item,
-                    name: item.qPath.match(nameRex)[1],
-                    params: paramsMatch ? paramsMatch[1] : ""
-                };
             }
         }
         return result;
     };
 
     var processCommandTpl = function(command) {
-        var reference = command.item.path.match(packageRex)[1].replace(/\//g, ".") + (command.params ? ", " : "");
+        var reference =  processPath(command.path) + (command.params ? ", " : "");
 
         return commandLocatorItemTpl.replace("{NAME}", command.name).replace(/\{PARAMS\}/g, command.params)
             .replace("{FACTORY}", (command.type === "QCommand" ? "Ether.plugin.commands.q()" : "Ether.plugin.commands.plain()"))
@@ -633,6 +674,14 @@ fluens.processor.EtherParser = function(model) {
     this.phases = {
         parse: {
             commands: this
+        },
+        stub: {
+            commands: {
+                action: processStubs,
+                validate: function() {
+                    return true;
+                }
+            }
         }
     };
 };
@@ -695,20 +744,20 @@ fluens.processor.FluensParser = function(model) {
 
     var self = this;
 
-    this.sources = function(item) {
-        return model.scriptTpl.replace('C', item.path);
+    this.sources = function(path) {
+        return model.scriptTpl.replace('C', path);
     };
 
-    this.vendors = function(item) {
-        return model.scriptTpl.replace('C', item.path);
+    this.vendors = function(path) {
+        return model.scriptTpl.replace('C', path);
     };
 
-    this.styles = function(item) {
-        return model.styleTpl.replace('C', item.path);
+    this.styles = function(path) {
+        return model.styleTpl.replace('C', path);
     };
 
-    this.namespaces = function(item) {
-        return "window." + item.path.replace(/\//g, ".") + " = {};";
+    this.namespaces = function(path) {
+        return "window." + path.replace(/\//g, ".") + " = {};";
     };
 
     this.action = function(facade) {
@@ -716,7 +765,9 @@ fluens.processor.FluensParser = function(model) {
 
         return _.map(facade.cache.getPhase(facade.scope.type, facade.phase.type),
             function(item) {
-                return self[facade.scope.type](item);
+                var cwd = model.stripslashes(facade.phase.cwd + "/");
+                var path = item.qPath.replace(cwd, "").replace(/^\W*/, "");
+                return self[facade.scope.type](path);
             }
         ).join('\n');
     };
