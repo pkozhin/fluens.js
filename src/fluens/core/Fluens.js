@@ -27,8 +27,13 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
             if (scopeType !== OPTIONS && scopeType !== DEFAULT_SCOPE) {
                 scope = self.scopeFactory(scopeType, contextType, phases);
 
+                grunt.verbose.writeln("Fluens: initializing context '"+ contextType +
+                    "', scope '"+ scopeType +"'");
+
                 _.forIn(item, function(phase, phaseType) {
                     var processor = scopes.processor(scopeType, phaseType);
+
+                    grunt.verbose.writeln("Fluens: initializing phase '"+ phaseType +"'");
 
                     phase.action = _.isFunction(phase.action) ? phase.action :
                         (processor ? _.bind(processor.action, processor) : null);
@@ -54,6 +59,7 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
 
     this.cacheContext = function(scopes) {
         _.each(scopes, function(scope){
+            grunt.verbose.writeln("Fluens: caching scope '"+ scope.type +"'");
             cache.cacheScope(scope);
         });
     };
@@ -74,6 +80,7 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
                 var actionFacade = self.actionFacadeFactory(phase.scope, phase, scopes, cache);
 
                 if (phase.validate(actionFacade)) {
+                    grunt.verbose.writeln("Fluens: processing scope '"+ phase.scope.type +"', phase '"+ phase.type +"'");
                     phase.content =  phase.action(actionFacade);
                 } else {
                     grunt.verbose.writeln("Fluens: phase '"+ phase.type +
@@ -98,10 +105,17 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
     this.run = function(type, context, options) {
         if (!context) { throw new Error("Fluens: Task '"+ type +"' is not configured."); }
 
-        var items = this.initContext(context, type, options);
+        try {
+            var items = this.initContext(context, type, options);
 
-        this.cacheContext(items);
-        this.processContext(items);
+            this.cacheContext(items);
+            this.processContext(items);
+        } catch (error) {
+            if (error.stack) {
+                console.error(error.stack);
+            }
+            throw error;
+        }
     };
 
     this.addProcessors = function(items) {

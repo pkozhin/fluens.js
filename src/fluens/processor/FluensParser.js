@@ -2,20 +2,20 @@ fluens.processor.FluensParser = function(model) {
 
     var self = this;
 
-    this.sources = function(item) {
-        return model.scriptTpl.replace('C', item.path);
+    this.sources = function(path) {
+        return model.scriptTpl.replace('C', path);
     };
 
-    this.vendors = function(item) {
-        return model.scriptTpl.replace('C', item.path);
+    this.vendors = function(path) {
+        return model.scriptTpl.replace('C', path);
     };
 
-    this.styles = function(item) {
-        return model.styleTpl.replace('C', item.path);
+    this.styles = function(path) {
+        return model.styleTpl.replace('C', path);
     };
 
-    this.namespaces = function(item) {
-        return "window." + item.path.replace(/\//g, ".") + " = {};";
+    this.namespaces = function(path) {
+        return "window." + path.replace(/\//g, ".") + " = {};";
     };
 
     this.action = function(facade) {
@@ -23,7 +23,9 @@ fluens.processor.FluensParser = function(model) {
 
         return _.map(facade.cache.getPhase(facade.scope.type, facade.phase.type),
             function(item) {
-                return self[facade.scope.type](item);
+                var cwd = model.stripslashes(facade.phase.cwd + "/");
+                var path = item.qPath.replace(cwd, "").replace(/^\W*/, "");
+                return self[facade.scope.type](path);
             }
         ).join('\n');
     };
