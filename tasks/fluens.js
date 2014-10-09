@@ -1,5 +1,5 @@
 /**
-* FluensJS - v0.1.2
+* FluensJS - v0.1.4
 * Copyright (c) 2014 Pavel Kozhin
 * License: MIT, https://github.com/pkozhin/fluens.js/blob/master/LICENSE
 */
@@ -639,7 +639,7 @@ fluens.processor.EtherParser = function(model) {
         var reference =  processPath(command.path) + (command.params ? ", " : "");
 
         return commandLocatorItemTpl.replace("{NAME}", command.name).replace(/\{PARAMS\}/g, command.params)
-            .replace("{FACTORY}", (command.type === "QCommand" ? "Ether.plugin.commands.q()" : "Ether.plugin.commands.plain()"))
+            .replace("{FACTORY}", (command.type === "QCommand" ? "ether.plugin.commands.q()" : "ether.plugin.commands.plain()"))
             .replace("{COMMAND}", reference);
     };
 
