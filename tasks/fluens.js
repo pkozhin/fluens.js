@@ -1,5 +1,5 @@
 /**
-* FluensJS - v0.1.5
+* FluensJS - v0.1.6
 * Copyright (c) 2014 Pavel Kozhin
 * License: MIT, https://github.com/pkozhin/fluens.js/blob/master/LICENSE
 */
@@ -31,6 +31,16 @@ fluens.common.Model = function() {
 
     this.stripslashes = function(value) {
         return value.replace(/\/\//g, "/");
+    };
+
+    this.trimtrailings = function(content) {
+        var trimming = [];
+
+        content.split('\n').forEach(function(line) {
+            trimming.push(line.replace(/\s+$/, ''));
+        });
+
+        return trimming.join('\n');
     };
 };
 
@@ -497,8 +507,8 @@ fluens.processor.EtherInjector = function(model) {
 
             commands = commands.sort();
 
-            newContent = model.normalizelf(replace(jsMatch, model.jsMarkerReplacer,
-                jsRex, facade, item, commands.join('\n\n')));
+            newContent = model.normalizelf(model.trimtrailings(replace(jsMatch, model.jsMarkerReplacer,
+                jsRex, facade, item, commands.join('\n\n'))));
 
             if (item.content !== newContent) {
                 grunt.file.write(item.qPath, newContent);

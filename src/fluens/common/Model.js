@@ -15,4 +15,14 @@ fluens.common.Model = function() {
     this.stripslashes = function(value) {
         return value.replace(/\/\//g, "/");
     };
+
+    this.trimtrailings = function(content) {
+        var trimming = [];
+
+        content.split('\n').forEach(function(line) {
+            trimming.push(line.replace(/\s+$/, ''));
+        });
+
+        return trimming.join('\n');
+    };
 };
