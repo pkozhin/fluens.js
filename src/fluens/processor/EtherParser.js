@@ -7,7 +7,7 @@ fluens.processor.EtherParser = function(model) {
         execRex = /\.execute = function[ ]?\(\)/;
 
     var commandLocatorItemTpl = "this.get{NAME} = function({PARAMS}) {\n" +
-        "\treturn {FACTORY}.get({COMMAND}{PARAMS});" +
+        model.validIndentation + "return {FACTORY}.get({COMMAND}{PARAMS});" +
         "\n};";
 
     var processPath = function(path) {

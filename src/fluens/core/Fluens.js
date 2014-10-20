@@ -21,6 +21,10 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
 
         options = _.merge(defaultOptions, options);
 
+        if (typeof options.validIndentation === "string") {
+            model.validIndentation = options.validIndentation;
+        }
+
         _.forIn(context, function(item, scopeType) {
             var phases = [], priority;
 
