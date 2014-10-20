@@ -20,8 +20,8 @@ fluens.processor.EtherInjector = function(model) {
 
             commands = commands.sort();
 
-            newContent = model.normalizelf(replace(jsMatch, model.jsMarkerReplacer,
-                jsRex, facade, item, commands.join('\n\n')));
+            newContent = model.normalizelf(model.trimtrailings(replace(jsMatch, model.jsMarkerReplacer,
+                jsRex, facade, item, commands.join('\n\n'))));
 
             if (item.content !== newContent) {
                 grunt.file.write(item.qPath, newContent);
