@@ -6,6 +6,7 @@ fluens.common.Model = function() {
     this.scriptTpl = '<script src="C"></script>';
     this.styleTpl = '<link href="C" rel="stylesheet">';
     this.linefeed = grunt.util.linefeed;
+    this.validIndentation = '    ';
 
     this.normalizelf = function(value) {
         return grunt.util.normalizelf(value);
