@@ -1,5 +1,5 @@
 /**
-* FluensJS - v0.1.4
+* FluensJS - v0.1.5
 * Copyright (c) 2014 Pavel Kozhin
 * License: MIT, https://github.com/pkozhin/fluens.js/blob/master/LICENSE
 */
@@ -23,6 +23,7 @@ fluens.common.Model = function() {
     this.scriptTpl = '<script src="C"></script>';
     this.styleTpl = '<link href="C" rel="stylesheet">';
     this.linefeed = grunt.util.linefeed;
+    this.validIndentation = '    ';
 
     this.normalizelf = function(value) {
         return grunt.util.normalizelf(value);
@@ -115,6 +116,10 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
         var result = [], scope;
 
         options = _.merge(defaultOptions, options);
+
+        if (typeof options.validIndentation === "string") {
+            model.validIndentation = options.validIndentation;
+        }
 
         _.forIn(context, function(item, scopeType) {
             var phases = [], priority;
@@ -535,7 +540,7 @@ fluens.processor.EtherParser = function(model) {
         execRex = /\.execute = function[ ]?\(\)/;
 
     var commandLocatorItemTpl = "this.get{NAME} = function({PARAMS}) {\n" +
-        "\treturn {FACTORY}.get({COMMAND}{PARAMS});" +
+        model.validIndentation + "return {FACTORY}.get({COMMAND}{PARAMS});" +
         "\n};";
 
     var processPath = function(path) {
