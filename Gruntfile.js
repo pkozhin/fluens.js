@@ -75,6 +75,10 @@ module.exports = function (grunt) {
         fluens: {
             test: {
                 options: {
+                    expose: {
+                        someOption: "foo",
+                        someOption2: "foo2"
+                    },
                     cwd: "./test/src/example/src",
                     phase: {
 
@@ -82,11 +86,11 @@ module.exports = function (grunt) {
                 },
                 sources: {
                     parse: {
-                        paths: ["fred/*.js", "*.js"]
+                        paths: ["fred/*.js", "model/*.js", "*.js"]
                     },
                     inject: {
                         cwd: "./test/src/example/src",
-                        paths: ["*.html"]
+                        paths: ["*.html", "model/*.js"]
                     }
                 },
                 dependencies: {

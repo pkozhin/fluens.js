@@ -3,6 +3,7 @@ fluens.core.FluensScope = function(type, contextType, phases) {
     this.context = contextType;
     this.phases = phases;
     this.excludes = null;
+    this.options = {};
 
     this.getPhase = function(type) {
         for (var i = 0; i < this.phases.length; ++i) {

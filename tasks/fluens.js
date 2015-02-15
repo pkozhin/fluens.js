@@ -1,5 +1,5 @@
 /**
-* FluensJS - v0.1.6
+* FluensJS - v0.1.8
 * Copyright (c) 2014 Pavel Kozhin
 * License: MIT, https://github.com/pkozhin/fluens.js/blob/master/LICENSE
 */
@@ -20,6 +20,7 @@ fluens.common.Model = function() {
     this.htmlMarkerReplacer = "<!--<fluens:T A>-->\nC\n<!--<\/fluens:T>-->";
     this.jsMarkerExp = /([ \t]*).*\/\*<fluens:T(.*)>\*\/([^~]*).*\/\*<\/fluens:T>\*\//;
     this.jsMarkerReplacer = "/*<fluens:T A>*/\nC\n/*<\/fluens:T>*/";
+    this.optionMarkerExp = /(.+=[ ]*)(.+)(;[ ]*\/\*fluens:options:)(.+)(\*\/)/;
     this.scriptTpl = '<script src="C"></script>';
     this.styleTpl = '<link href="C" rel="stylesheet">';
     this.linefeed = grunt.util.linefeed;
@@ -136,6 +137,7 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
 
             if (scopeType !== OPTIONS && scopeType !== DEFAULT_SCOPE) {
                 scope = self.scopeFactory(scopeType, contextType, phases);
+                scope.options = _.extend({}, options);
 
                 grunt.verbose.writeln("Fluens: initializing context '"+ contextType +
                     "', scope '"+ scopeType +"'");
@@ -352,6 +354,7 @@ fluens.core.FluensScope = function(type, contextType, phases) {
     this.context = contextType;
     this.phases = phases;
     this.excludes = null;
+    this.options = {};
 
     this.getPhase = function(type) {
         for (var i = 0; i < this.phases.length; ++i) {
@@ -712,12 +715,23 @@ fluens.processor.FluensInjector = function(model) {
         return item.content.replace(rex, result);
     };
 
+    var wrapValueAsType = function(value) {
+        if (_.isString(value)) {
+            value = "\"" + value + "\"";
+        }
+        return value;
+    };
+
+    // TODO: Refactor
     var injectItem = function(facade, item) {
         var htmlRex = new RegExp(model.htmlMarkerExp.source.replace(/T/g, facade.scope.type)),
             jsRex = new RegExp(model.jsMarkerExp.source.replace(/T/g, facade.scope.type)),
+            optionRex = new RegExp(model.optionMarkerExp.source, "g"),
             newContent = item.content,
             htmlMatch = newContent.match(htmlRex),
-            jsMatch = newContent.match(jsRex);
+            jsMatch = newContent.match(jsRex),
+            optionMatch = newContent.match(optionRex),
+            exposedOptions = facade.scope.options.expose;
 
         if (htmlMatch) {
             newContent = model.normalizelf(replace(htmlMatch,
@@ -726,7 +740,20 @@ fluens.processor.FluensInjector = function(model) {
             newContent = model.normalizelf(replace(jsMatch,
                 model.jsMarkerReplacer, jsRex, facade, item));
         }
-        if ((htmlMatch || jsMatch) && item.content !== newContent) {
+
+        if (optionMatch && exposedOptions) {
+            _.each(optionMatch, function(value) {
+                var rex = new RegExp(model.optionMarkerExp.source),
+                    match = value.match(rex),
+                    contentLine;
+
+                if (match && exposedOptions[match[4]]) {
+                    contentLine = value.replace(rex, "$1" + wrapValueAsType(exposedOptions[match[4]]) + "$3$4$5");
+                    newContent = newContent.replace(value, contentLine);
+                }
+            });
+        }
+        if ((htmlMatch || jsMatch || (optionMatch && exposedOptions)) && item.content !== newContent) {
             grunt.file.write(item.qPath, newContent);
             grunt.verbose.writeln("Fluens: file " + item.path +
                 " injected within '"+ facade.scope.type +"' scope.");

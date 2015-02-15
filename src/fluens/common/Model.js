@@ -3,6 +3,7 @@ fluens.common.Model = function() {
     this.htmlMarkerReplacer = "<!--<fluens:T A>-->\nC\n<!--<\/fluens:T>-->";
     this.jsMarkerExp = /([ \t]*).*\/\*<fluens:T(.*)>\*\/([^~]*).*\/\*<\/fluens:T>\*\//;
     this.jsMarkerReplacer = "/*<fluens:T A>*/\nC\n/*<\/fluens:T>*/";
+    this.optionMarkerExp = /(.+=[ ]*)(.+)(;[ ]*\/\*fluens:options:)(.+)(\*\/)/;
     this.scriptTpl = '<script src="C"></script>';
     this.styleTpl = '<link href="C" rel="stylesheet">';
     this.linefeed = grunt.util.linefeed;
