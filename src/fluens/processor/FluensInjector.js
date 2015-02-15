@@ -9,12 +9,23 @@ fluens.processor.FluensInjector = function(model) {
         return item.content.replace(rex, result);
     };
 
+    var wrapValueAsType = function(value) {
+        if (_.isString(value)) {
+            value = "\"" + value + "\"";
+        }
+        return value;
+    };
+
+    // TODO: Refactor
     var injectItem = function(facade, item) {
         var htmlRex = new RegExp(model.htmlMarkerExp.source.replace(/T/g, facade.scope.type)),
             jsRex = new RegExp(model.jsMarkerExp.source.replace(/T/g, facade.scope.type)),
+            optionRex = new RegExp(model.optionMarkerExp.source, "g"),
             newContent = item.content,
             htmlMatch = newContent.match(htmlRex),
-            jsMatch = newContent.match(jsRex);
+            jsMatch = newContent.match(jsRex),
+            optionMatch = newContent.match(optionRex),
+            exposedOptions = facade.scope.options.expose;
 
         if (htmlMatch) {
             newContent = model.normalizelf(replace(htmlMatch,
@@ -23,7 +34,20 @@ fluens.processor.FluensInjector = function(model) {
             newContent = model.normalizelf(replace(jsMatch,
                 model.jsMarkerReplacer, jsRex, facade, item));
         }
-        if ((htmlMatch || jsMatch) && item.content !== newContent) {
+
+        if (optionMatch && exposedOptions) {
+            _.each(optionMatch, function(value) {
+                var rex = new RegExp(model.optionMarkerExp.source),
+                    match = value.match(rex),
+                    contentLine;
+
+                if (match && exposedOptions[match[4]]) {
+                    contentLine = value.replace(rex, "$1" + wrapValueAsType(exposedOptions[match[4]]) + "$3$4$5");
+                    newContent = newContent.replace(value, contentLine);
+                }
+            });
+        }
+        if ((htmlMatch || jsMatch || (optionMatch && exposedOptions)) && item.content !== newContent) {
             grunt.file.write(item.qPath, newContent);
             grunt.verbose.writeln("Fluens: file " + item.path +
                 " injected within '"+ facade.scope.type +"' scope.");

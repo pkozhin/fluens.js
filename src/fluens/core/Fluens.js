@@ -30,6 +30,7 @@ fluens.core.Fluens = function(model, cache, scopes, validator) {
 
             if (scopeType !== OPTIONS && scopeType !== DEFAULT_SCOPE) {
                 scope = self.scopeFactory(scopeType, contextType, phases);
+                scope.options = _.extend({}, options);
 
                 grunt.verbose.writeln("Fluens: initializing context '"+ contextType +
                     "', scope '"+ scopeType +"'");

@@ -51,7 +51,16 @@ exports.fluens = {
       var actual = grunt.file.read('test/src/example/src/command/CommandLocator.js'),
           expected = grunt.file.read('test/expected/CommandLocator.js');
 
-      test.equal(actual, expected, 'should process result.js correctly');
+      test.equal(actual, expected, 'should process CommandLocator.js correctly');
       test.done();
-    }
+  },
+  Model_js: function (test) {
+    test.expect(1);
+
+    var actual = grunt.file.read('test/src/example/src/model/Model.js'),
+        expected = grunt.file.read('test/expected/Model.js');
+
+    test.equal(actual, expected, 'should process Model.js correctly');
+    test.done();
+  }
 };
